@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-02T15:29:29+01:00</updated>
+  <updated>2017-09-02T17:10:23+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -15,7 +15,7 @@
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
-    <link href="http://tthew.org/introduction-to-hacking-ios-apps-part-2/"/>
+    <link href="http://tthew.org/ios-hacking-2/"/>
     <updated>2017-09-02T12:12:00+01:00</updated>
     <id>http://tthew.org/introduction-to-hacking-ios-apps-part-2</id>
     <content type="html"><![CDATA[<p>In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.</p>
@@ -26,14 +26,14 @@
 <blockquote><p>This is part 2 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/introduction-to-hacking-ios-apps-part-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li>Part 2: post-jailbreak stuff</li>
 </ul>
 </blockquote>
 
 <h3>Recap</h3>
 
-<p>In the <a href="http://tthew.org/introduction-to-hacking-ios-apps-part-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+<p>In the <a href="http://tthew.org/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
 
 <p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
 
@@ -99,7 +99,7 @@
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 1)]]></title>
-    <link href="http://tthew.org/introduction-to-hacking-ios-apps-part-1/"/>
+    <link href="http://tthew.org/ios-hacking-1/"/>
     <updated>2017-09-02T09:30:56+01:00</updated>
     <id>http://tthew.org/introduction-to-hacking-ios-apps-part-1</id>
     <content type="html"><![CDATA[<p>There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.</p>
@@ -121,7 +121,7 @@
 
 <ul>
 <li>Part 1: obtaining and jailbreaking a device</li>
-<li><a href="http://tthew.org/introduction-to-hacking-ios-apps-part-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 </ul>
 </blockquote>
 
@@ -207,7 +207,7 @@
 </ul>
 
 
-<p>That&rsquo;s enough for this post. In <a href="http://tthew.org/introduction-to-hacking-ios-apps-part-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
+<p>That&rsquo;s enough for this post. In <a href="http://tthew.org/ios-hacking-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
 ]]></content>
   </entry>
   

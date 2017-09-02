@@ -4,6 +4,7 @@ title: "Introduction to hacking iOS apps (part 2)"
 date: 2017-09-02 12:12:00 +0100
 comments: true
 categories: [hacking,jailbreaking]
+permalink: /ios-hacking-2/
 ---
 
 In this second part of the "hacking iOS apps" series, we'll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.
@@ -58,6 +59,6 @@ In order to debug applications running on the device, we'll to install need the 
 Next time: we'll debug a running app, and make some runtime changes.
 
 
-[part1]: /introduction-to-hacking-ios-apps-part-1/
+[part1]: /ios-hacking-1/
 [Dropbear]: https://matt.ucc.asn.au/dropbear/dropbear.html
 

@@ -4,6 +4,7 @@ title: "Introduction to hacking iOS apps (part 1)"
 date: 2017-09-02 09:30:56 +0100
 comments: true
 categories: [hacking,jailbreaking]
+permalink: /ios-hacking-1/
 ---
 
 There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.
@@ -88,7 +89,7 @@ That's enough for this post. In [the next post][part2], we'll install some neces
 
 
 
-[part2]: /introduction-to-hacking-ios-apps-part-2/
+[part2]: /ios-hacking-2/
 [iPhoneWiki]: https://www.theiphonewiki.com/wiki/Jailbreak "the iPhone wiki"
 [yalu102]: https://yalu.qwertyoruiop.com "yalu102 beta 7"
 [CydiaImpactor]: http://www.cydiaimpactor.com "Cydia Impactor"
