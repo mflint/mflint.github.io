@@ -62,6 +62,8 @@ First, you'll need to take precautions against automatic iOS updates. If the lat
 * open the camera app and record a 10-minute video
 * open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory
 * this means that the device doesn't have enough space to download iOS updates
+  * to check: go to the _General -> Software Updates_ part of the _Settings_ app
+  * you should see the message _"This update cannot be installed because it requies at least XXX MB of available storage"_.
 * you'll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space
 * each copy of the 10-minute video is around 150 MB on my device
 

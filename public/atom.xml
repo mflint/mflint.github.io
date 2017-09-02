@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-02T14:24:24+01:00</updated>
+  <updated>2017-09-02T14:34:19+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -175,7 +175,13 @@
 <li>disable iCloud Photo Libaray (otherwise the device will try to free space by uploading these images to iCloud - but <em>we want</em> the device to be almost full)</li>
 <li>open the camera app and record a 10-minute video</li>
 <li>open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory</li>
-<li>this means that the device doesn&rsquo;t have enough space to download iOS updates</li>
+<li>this means that the device doesn&rsquo;t have enough space to download iOS updates
+
+<ul>
+<li>to check: go to the <em>General -> Software Updates</em> part of the <em>Settings</em> app</li>
+<li>you should see the message <em>&ldquo;This update cannot be installed because it requies at least XXX MB of available storage&rdquo;</em>.</li>
+</ul>
+</li>
 <li>you&rsquo;ll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space</li>
 <li>each copy of the 10-minute video is around 150 MB on my device</li>
 </ul>
