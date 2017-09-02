@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
+<loc>http://tthew.org/blog/2017/09/02/introduction-to-hacking-ios-apps-part-1/</loc>
+<lastmod>2017-09-02T09:30:56+01:00</lastmod>
+</url>
+<url>
 <loc>http://tthew.org/archives/</loc>
 </url>
 <url>
@@ -11,5 +15,11 @@
 </url>
 <url>
 <loc>http://tthew.org/</loc>
+</url>
+<url>
+<loc>http://tthew.org/blog/categories/hacking/</loc>
+</url>
+<url>
+<loc>http://tthew.org/blog/categories/jailbreaking/</loc>
 </url>
 </urlset>
