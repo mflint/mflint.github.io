@@ -6,6 +6,11 @@ comments: true
 categories: [hacking,jailbreaking]
 ---
 
+> This is part 1 of a multi-part series:
+> 
+> * Part 1: obtaining and jailbreaking a device
+> * [Part 2][part2]: post-jailbreak stuff
+
 ### Overview
 There are several steps to doing this, and I aim to cover them over a series of blog posts.
 
@@ -56,7 +61,7 @@ First, you'll need to take precautions against automatic iOS updates. If the lat
 
 * disable iCloud Photo Libaray (otherwise the device will try to free space by uploading these images to iCloud - but _we want_ the device to be almost full)
 * open the camera app and record a 10-minute video
-* open the photos app and duplicate this video multiple times, until your device has less than 900 MB free memory
+* open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory
 * this means that the device doesn't have enough space to download iOS updates
 * you'll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space
 * each copy of the 10-minute video is around 150 MB on my device
@@ -82,6 +87,7 @@ That's enough for this post. In the next blog-post, we'll install some necessary
 
 
 
+[part2]: /blog/2017/09/02/introduction-to-hacking-ios-apps-part-2/
 [iPhoneWiki]: https://www.theiphonewiki.com/wiki/Jailbreak "the iPhone wiki"
 [yalu102]: https://yalu.qwertyoruiop.com "yalu102 beta 7"
 [CydiaImpactor]: http://www.cydiaimpactor.com "Cydia Impactor"
