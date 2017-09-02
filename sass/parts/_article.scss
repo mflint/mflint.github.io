@@ -49,11 +49,15 @@ article{
 		}
 
 		a:hover {
-			border-bottom:1px solid #bf0222;
 		}
 
 		
-		.more-link{
+        .more-link{
+            display: block;
+			margin-top: 16px;
+        }
+
+		.xmore-link{
 			display: block;
 			margin-top: 16px;
 			padding-left: 30px;

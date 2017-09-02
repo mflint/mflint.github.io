@@ -6,6 +6,10 @@ comments: true
 categories: [hacking,jailbreaking]
 ---
 
+In this second part of the "hacking iOS apps" series, we'll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.
+
+<!-- more -->
+
 > This is part 2 of a multi-part series:
 > 
 > * [Part 1][part1]: obtaining and jailbreaking a device

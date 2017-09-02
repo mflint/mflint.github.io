@@ -6,13 +6,7 @@ comments: true
 categories: [hacking,jailbreaking]
 ---
 
-> This is part 1 of a multi-part series:
-> 
-> * Part 1: obtaining and jailbreaking a device
-> * [Part 2][part2]: post-jailbreak stuff
-
-### Overview
-There are several steps to doing this, and I aim to cover them over a series of blog posts.
+There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.
 
 1. Acquiring and jailbreaking an iOS device
 2. Installing necessary tools
@@ -22,6 +16,11 @@ There are several steps to doing this, and I aim to cover them over a series of 
 In this first post, we'll acquire and jailbreak an iOS device.
 
 <!-- more -->
+
+> This is part 1 of a multi-part series:
+> 
+> * Part 1: obtaining and jailbreaking a device
+> * [Part 2][part2]: post-jailbreak stuff
 
 ### Acquiring a suitable iOS device
 First, some warnings:
