@@ -4,7 +4,7 @@
   <title><![CDATA[Category: hacking | Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/blog/categories/hacking/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-02T14:08:13+01:00</updated>
+  <updated>2017-09-02T14:24:24+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -201,7 +201,7 @@
 </ul>
 
 
-<p>That&rsquo;s enough for this post. In the next blog-post, we&rsquo;ll install some necessary tools onto the device.</p>
+<p>That&rsquo;s enough for this post. In <a href="/blog/2017/09/02/introduction-to-hacking-ios-apps-part-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
 ]]></content>
   </entry>
   

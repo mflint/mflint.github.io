@@ -82,7 +82,7 @@ Next go back to [the iPhone wiki][iPhoneWiki] to check which jailbreak to use fo
 * when it has restarted, you'll find the Cydia app installed too
 * since this is a semi-untethered jailbreak tool, you'll need to run yalu102 to re-jailbreak every time the device boots
 
-That's enough for this post. In the next blog-post, we'll install some necessary tools onto the device.
+That's enough for this post. In [the next post][part2], we'll install some necessary tools onto the device.
 
 
 
