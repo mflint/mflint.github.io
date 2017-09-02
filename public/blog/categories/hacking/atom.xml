@@ -4,7 +4,7 @@
   <title><![CDATA[Category: hacking | Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/blog/categories/hacking/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-02T14:01:13+01:00</updated>
+  <updated>2017-09-02T14:01:38+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,85 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
+    <link href="http://tthew.org/blog/2017/09/02/introduction-to-hacking-ios-apps-part-2/"/>
+    <updated>2017-09-02T12:12:00+01:00</updated>
+    <id>http://tthew.org/blog/2017/09/02/introduction-to-hacking-ios-apps-part-2</id>
+    <content type="html"><![CDATA[<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="/blog/2017/09/02/introduction-to-hacking-ios-apps-part-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li>Part 2: post-jailbreak stuff</li>
+</ul>
+</blockquote>
+
+<h3>Recap</h3>
+
+<p>In the <a href="/blog/2017/09/02/introduction-to-hacking-ios-apps-part-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+
+<p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
+
+<h3>Cydia updates</h3>
+
+<p>When you start Cydia for the first time, you&rsquo;ll probably be prompted to perform an <em>Essential Upgrade</em>. I&rsquo;d go for the &ldquo;Complete Upgrade&rdquo;; Cydia will kill itself when this is complete.</p>
+
+<p>Next, we&rsquo;ll access the device over <em>ssh</em>.</p>
+
+<h3>ssh access over WiFi</h3>
+
+<p>The yalu jailbreak already includes the <a href="https://matt.ucc.asn.au/dropbear/dropbear.html">Dropbear</a> ssh server, so no need to install <em>OpenSSH</em>. By default, the server is only enabled over USB - so we&rsquo;ll need to change the config to allow this over WiFi.</p>
+
+<ul>
+<li>use Cydia to install &ldquo;Filza File Manager&rdquo; app</li>
+<li>open Filza, and find &ldquo;/private/var/containers/Bundle/Application/yalu102/yalu102.app/dropbear.plist&rdquo;</li>
+<li>use the (i) button to change &ldquo;OPen with&rdquo; to &ldquo;Text Editor&rdquo;, then tap &ldquo;dropbear.plist&rdquo; to edit it</li>
+<li>find <code>127.0.0.1:22</code> and replace it with <code>22</code> (this binds the dropbear ssh daemon to all network interfaces, instead of the default which just uses loopback)</li>
+<li>reboot the device (and re-jailbreak if necessary)</li>
+<li>you should be able to ssh to the device
+
+<ul>
+<li><code>ssh root@{ip-address}</code></li>
+<li>password <code>alpine</code></li>
+</ul>
+</li>
+<li>now&rsquo;s a great time to change the root password
+
+<ul>
+<li><code>passwd</code></li>
+</ul>
+</li>
+<li>and also change the password for the user &ldquo;mobile&rdquo;, which is used for running most apps
+
+<ul>
+<li><code>passwd mobile</code></li>
+</ul>
+</li>
+</ul>
+
+
+<h3>debugserver</h3>
+
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. This is dead easy to do - Xcode can install it for us.</p>
+
+<ul>
+<li>open Xcode and create a new project</li>
+<li>make sure the deployment target is low enough to run on the device</li>
+<li>debug the new app on the device</li>
+<li>Xcode will install <code>debugserver</code> for you</li>
+<li>check it&rsquo;s installed on the device:
+
+<ul>
+<li><code>ls -l /Developer/usr/bin/debugserver</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 1)]]></title>

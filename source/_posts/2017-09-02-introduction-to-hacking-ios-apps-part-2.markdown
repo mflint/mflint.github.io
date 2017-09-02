@@ -3,7 +3,7 @@ layout: post
 title: "Introduction to hacking iOS apps (part 2)"
 date: 2017-09-02 12:12:00 +0100
 comments: true
-categories: 
+categories: [hacking,jailbreaking]
 ---
 
 > This is part 2 of a multi-part series:
