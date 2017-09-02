@@ -58,6 +58,6 @@ In order to debug applications running on the device, we'll to install need the 
 Next time: we'll debug a running app, and make some runtime changes.
 
 
-[part1]: /blog/2017/09/02/introduction-to-hacking-ios-apps-part-1/
+[part1]: /introduction-to-hacking-ios-apps-part-1/
 [Dropbear]: https://matt.ucc.asn.au/dropbear/dropbear.html
 
