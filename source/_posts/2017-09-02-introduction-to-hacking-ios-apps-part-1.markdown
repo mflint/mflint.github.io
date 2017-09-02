@@ -14,6 +14,8 @@ There are several steps to doing this, and I aim to cover them over a series of 
 3. Analysing third-party apps
 4. Changing functionality
 
+In this first post, we'll acquire and jailbreak and iOS device.
+
 <!-- more -->
 
 ### Acquiring a suitable iOS device
