@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-03T11:17:43+01:00</updated>
+  <updated>2017-09-03T18:55:28+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,130 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
+    <link href="http://tthew.org/ios-hacking-4/"/>
+    <updated>2017-09-03T11:58:24+01:00</updated>
+    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-4</id>
+    <content type="html"><![CDATA[<p>OK team, it gets slightly more exciting now: lets tweak an iOS app at runtime, using Jay Freeman&rsquo;s <em>Cycript</em> tool.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li>Part 4: altering apps at runtime with Cycript</li>
+</ul>
+</blockquote>
+
+<h3>What is Cycript?</h3>
+
+<p>Cycript is a tool based around a JavaScript interpreter, which can inject itself into another running process. It provides a rich set of features to bridge between C, C++, Objective C (and Java, if that&rsquo;s your thing) into JavaScript. You can use it for inspecting and manipulating running processes.</p>
+
+<h3>Download Cycript and copy to the device</h3>
+
+<p>Let&rsquo;s start by going to the <a href="http://www.cycript.org">Cycript homepage</a> and downloading the SDK. I assume it&rsquo;s unzipped into your Downloads folder. Then we can copy it over to the device:</p>
+
+<p><code>tar -czf - ~/Downloads/cycript_0 | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>(This will take a minute to complete - be patient)</p>
+
+<p>The <a href="http://www.cycript.org/manual/">Cycript manual</a> is a great detailed read - I recommend spending 30 minutes to read the whole thing. For now, let&rsquo;s hook it up to the Calculator app and see what it can do.</p>
+
+<h3>Cycript the Calculator app</h3>
+
+<p>Launch the Calculator app on the device, and ssh into it. <em>Cycript</em> can attach to processes by <em>pid</em> or by name. I&rsquo;m weird and like to use the <em>pid</em>, but here&rsquo;s how you&rsquo;d do it both ways:</p>
+
+<p><code>./cycript_0/cycript -p 520</code></p>
+
+<p><code>./cycript_0/cycript -p Calculator</code></p>
+
+<p>When you&rsquo;ve finished with <em>Cycript</em>, you can exit by typing <code>?exit</code> or send the <code>EOF</code> character (^D).</p>
+
+<p>We&rsquo;ll start with a simple query to see what&rsquo;s on the screen. Let&rsquo;s use the <code>choose</code> command to find the some ViewController classes:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cy# choose(UIViewController)
+</span><span class='line'>[#"&lt;Calculator.CalculatorController: 0x100205170&gt;",
+</span><span class='line'>#"&lt;Calculator.DisplayViewController: 0x1002054c0&gt;",
+</span><span class='line'>#"&lt;Calculator.KeypadViewController: 0x100205a10&gt;"]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Interesting! Looks like there&rsquo;s a main <code>CalculatorController</code> and two child ViewControllers for the the display and the keyboard. Sweet.</p>
+
+<p>So what about labels?</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cy# choose(UILabel)
+</span><span class='line'>[#"&lt;Calculator.CalculatorKeypadLabel: 0x10030c540; baseClass = UILabel; frame = (160 1.5; 79 79); text = '%'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408c7b0&gt;&gt;",
+</span><span class='line'>#"&lt;UILabel: 0x10030da30; frame = (257.5 68.5; 47.5 99.5); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408bc70&gt;&gt;",
+</span><span class='line'>#"&lt;UILabel: 0x100206eb0; frame = (18 142.5; 0 0); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008c120&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d080; baseClass = UILabel; frame = (1.5 1.5; 78.5 79); text = 'C'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cad0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d830; baseClass = UILabel; frame = (80.5 1.5; 79 79); text = '\xef\xbf\xbc'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce40&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020ff90; baseClass = UILabel; frame = (1.5 81; 78.5 79); text = '7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce90&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002105c0; baseClass = UILabel; frame = (239.5 1.5; 79 79); text = '\xc3\xb7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cee0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002108c0; baseClass = UILabel; frame = (80.5 81; 79 79); text = '8'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d1b0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100210b50; baseClass = UILabel; frame = (160 81; 79 79); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cfd0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100210de0; baseClass = UILabel; frame = (239.5 81; 79 79); text = '\xc3\x97'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d390&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211070; baseClass = UILabel; frame = (1.5 160.5; 78.5 79); text = '4'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d480&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211610; baseClass = UILabel; frame = (80.5 160.5; 79 79); text = '5'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d570&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002118a0; baseClass = UILabel; frame = (160 160.5; 79 79); text = '6'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d660&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211b30; baseClass = UILabel; frame = (239.5 160.5; 79 79); text = '\xe2\x88\x92'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d750&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211dc0; baseClass = UILabel; frame = (1.5 240; 78.5 79); text = '1'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d840&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212050; baseClass = UILabel; frame = (80.5 240; 79 79); text = '2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d930&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002122e0; baseClass = UILabel; frame = (160 240; 79 79); text = '3'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008da20&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212570; baseClass = UILabel; frame = (239.5 240; 79 79); text = '+'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008db10&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212800; baseClass = UILabel; frame = (1.5 319.5; 78.5 79); text = '0'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dc00&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212a90; baseClass = UILabel; frame = (80.5 319.5; 79 79); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dcf0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212d20; baseClass = UILabel; frame = (160 319.5; 79 79); text = '\xe2\x80\xa2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dd90&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100213c00; baseClass = UILabel; frame = (239.5 319.5; 79 79); text = '='; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008e010&gt;&gt;"]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yup, there&rsquo;s a shedload of labels, as you&rsquo;d expect. Can we change one?</p>
+
+<p>Find the &ldquo;5&rdquo; label and get it&rsquo;s memory address. Mine is at <code>0x100211610</code>. We can assign a variable to this memory address, and easily change its label to <em>emoji poop</em>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>var label5=new Instance(0x100211610)
+</span><span class='line'>label5.text=@"\ud83d\udca9"</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Cycript</em> is a great tool, and can do much more than this trivial change.</p>
+
+<p>Next time: we&rsquo;ll have play with <a href="https://www.frida.re">Frida</a>, an instrumentation and code-injection toolkit.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 3)]]></title>
@@ -29,6 +153,7 @@
 <li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li>Part 3: debugging apps with lldb</li>
+<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
 </ul>
 </blockquote>
 
@@ -144,7 +269,7 @@
 
 <p>&hellip; and you&rsquo;ll see the app has resumed, and buttons work once more.</p>
 
-<p>If you want to continue using <code>lldb</code>, then do so - there&rsquo;s a ton of information on <a href="http://lldb.llvm.org">the lldb homepage</a>. In the next instalment, we&rsquo;ll switch tools and use Jay Freeman&rsquo;s <code>Cycrypt</code> to play with this app some more.</p>
+<p>If you want to continue using <code>lldb</code>, then do so - there&rsquo;s a ton of information on <a href="http://lldb.llvm.org">the lldb homepage</a>. In the next instalment, we&rsquo;ll switch tools and use Jay Freeman&rsquo;s <code>Cycript</code> to play with this app some more.</p>
 ]]></content>
   </entry>
   
@@ -164,6 +289,7 @@
 <li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li>Part 2: post-jailbreak stuff</li>
 <li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
 </ul>
 </blockquote>
 
@@ -289,6 +415,7 @@
 <li>Part 1: obtaining and jailbreaking a device</li>
 <li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
 </ul>
 </blockquote>
 

@@ -16,6 +16,7 @@ Now we have a jailbroken phone with dev tools installed, it's time to start play
 > * [Part 1][part1]: obtaining and jailbreaking a device
 > * [Part 2][part2]: post-jailbreak stuff
 > * Part 3: debugging apps with lldb
+> * [Part 4][part4]: altering apps at runtime with Cycript
 
 ### Debugging apps with `lldb`
 
@@ -89,8 +90,9 @@ Process 717 resuming
 
 ... and you'll see the app has resumed, and buttons work once more.
 
-If you want to continue using `lldb`, then do so - there's a ton of information on [the lldb homepage][lldb]. In the next instalment, we'll switch tools and use Jay Freeman's `Cycrypt` to play with this app some more.
+If you want to continue using `lldb`, then do so - there's a ton of information on [the lldb homepage][lldb]. In the next instalment, we'll switch tools and use Jay Freeman's `Cycript` to play with this app some more.
 
 [part1]: /ios-hacking-1/
 [part2]: /ios-hacking-2/
+[part4]: /ios-hacking-4/
 [lldb]: http://lldb.llvm.org

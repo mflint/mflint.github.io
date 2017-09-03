@@ -16,6 +16,7 @@ In this second part of the "hacking iOS apps" series, we'll perform some post-ja
 > * [Part 1][part1]: obtaining and jailbreaking a device
 > * Part 2: post-jailbreak stuff
 > * [Part 3][part3]: debugging apps with lldb
+> * [Part 4][part4]: altering apps at runtime with Cycript
 
 ### Recap
 
@@ -90,5 +91,6 @@ Next time: we'll debug a running app, and make some runtime changes.
 
 [part1]: /ios-hacking-1/
 [part3]: /ios-hacking-3/
+[part4]: /ios-hacking-4/
 [Dropbear]: https://matt.ucc.asn.au/dropbear/dropbear.html
 
