@@ -22,6 +22,7 @@ In this first post, we'll acquire and jailbreak an iOS device.
 > 
 > * Part 1: obtaining and jailbreaking a device
 > * [Part 2][part2]: post-jailbreak stuff
+> * [Part 3][part3]: debugging apps with lldb
 
 ### Acquiring a suitable iOS device
 First, some warnings:
@@ -64,7 +65,7 @@ First, you'll need to take precautions against automatic iOS updates. If the lat
 * open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory
 * this means that the device won't have enough space to download iOS updates
   * to check: go to the _General -> Software Updates_ part of the _Settings_ app
-  * you should see the message _"This update cannot be installed because it requies at least XXX MB of available storage"_.
+  * you should see the message _"This update cannot be installed because it requires at least XXX MB of available storage"_.
 * you'll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space
 * each copy of the 10-minute video is around 150 MB on my device
 
@@ -90,6 +91,7 @@ That's enough for this post. In [the next post][part2], we'll install some neces
 
 
 [part2]: /ios-hacking-2/
+[part3]: /ios-hacking-3/
 [iPhoneWiki]: https://www.theiphonewiki.com/wiki/Jailbreak "the iPhone wiki"
 [yalu102]: https://yalu.qwertyoruiop.com "yalu102 beta 7"
 [CydiaImpactor]: http://www.cydiaimpactor.com "Cydia Impactor"

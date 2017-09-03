@@ -4,7 +4,7 @@
   <title><![CDATA[Category: jailbreaking | Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/blog/categories/jailbreaking/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-02T18:01:28+01:00</updated>
+  <updated>2017-09-03T11:17:43+01:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 3)]]></title>
+    <link href="http://tthew.org/ios-hacking-3/"/>
+    <updated>2017-09-03T10:56:18+01:00</updated>
+    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-3</id>
+    <content type="html"><![CDATA[<p>Now we have a jailbroken phone with dev tools installed, it&rsquo;s time to start playing with apps. We&rsquo;ll start by debugging a running stock app using <code>lldb</code>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li>Part 3: debugging apps with lldb</li>
+</ul>
+</blockquote>
+
+<h3>Debugging apps with <code>lldb</code></h3>
+
+<p>Start the Calculator app on the device, then<code>ssh</code> into the device (as <code>root</code>). Find the process ID (&ldquo;pid&rdquo;) of the running Calculator app.</p>
+
+<pre><code>JB-phone:~ root# ps ax | grep -i calculator
+717   ??  Ss     0:00.31 /Applications/Calculator.app/Calculator
+719 s000  R+     0:00.01 grep -i calculator
+</code></pre>
+
+<p>So the <em>pid</em> is 717. Yours will probably be different.</p>
+
+<p>Start <code>debugserver</code> on the device, and attach it to the Calculator process by using its <em>pid</em>. I&rsquo;ve used port 1234, but it could be anything greater than 1024:</p>
+
+<pre><code>JB-phone:~ root# ./debugserver *:1234 --attach=717
+debugserver-@(#)PROGRAM:debugserver  PROJECT:debugserver-360.0.26.1
+ for arm64.
+Attaching to process 717...
+Listening to port 1234 for a connection from *...
+</code></pre>
+
+<p>The debugger is attached to the Calculator process, now let&rsquo;s attach <code>lldb</code> to it <em>from your Mac</em>:</p>
+
+<ul>
+<li>start <code>lldb</code> on your Mac</li>
+<li><code>platform select remote-ios</code></li>
+<li><code>process connect connect://192.168.1.20:1234</code>
+
+<ul>
+<li>where this is the IP address of the device, and the <code>debugserver</code> port</li>
+</ul>
+</li>
+</ul>
+
+
+<p>The output looks like this:</p>
+
+<pre><code>Mac:~ matthew$ lldb
+(lldb) platform select remote-ios
+  Platform: remote-ios
+ Connected: no
+  SDK Path: "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+ SDK Roots: [ 0] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.1.1 (14B100)"
+ SDK Roots: [ 1] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2 (14C92)"
+ SDK Roots: [ 2] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2.1 (14D27)"
+ SDK Roots: [ 3] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.3.2 (14F89)"
+ SDK Roots: [ 4] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+ SDK Roots: [ 5] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5327g)"
+ SDK Roots: [ 6] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5341f)"
+ SDK Roots: [ 7] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5362a)"
+ SDK Roots: [ 8] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5368a)"
+(lldb) process connect connect://192.168.1.20:1234
+Process 717 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x0000000185a4816c libsystem_kernel.dylib`mach_msg_trap + 8
+libsystem_kernel.dylib`mach_msg_trap:
+-&gt;  0x185a4816c &lt;+8&gt;: ret    
+
+libsystem_kernel.dylib`mach_msg_overwrite_trap:
+    0x185a48170 &lt;+0&gt;: mov    x16, #-0x20
+    0x185a48174 &lt;+4&gt;: svc    #0x80
+    0x185a48178 &lt;+8&gt;: ret    
+(lldb)  
+</code></pre>
+
+<p>Notice that <code>lldb</code> says the process has been stopped. It really means &ldquo;suspended&rdquo;, as if it were at a breakpoint. Tap buttons on the Calculator app - they won&rsquo;t work, proving that the app is paused.</p>
+
+<p>We can unpause the app by issuing the <code>continue</code> command to <code>lldb</code>:</p>
+
+<pre><code>(lldb) continue
+Process 717 resuming
+(lldb) 
+</code></pre>
+
+<p>&hellip; and you&rsquo;ll see the app has resumed, and buttons work once more.</p>
+
+<p>If you want to continue using <code>lldb</code>, then do so - there&rsquo;s a ton of information on <a href="http://lldb.llvm.org">the lldb homepage</a>. In the next instalment, we&rsquo;ll switch tools and use Jay Freeman&rsquo;s <code>Cycrypt</code> to play with this app some more.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
@@ -28,6 +126,7 @@
 <ul>
 <li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li>Part 2: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 </ul>
 </blockquote>
 
@@ -77,21 +176,41 @@
 
 <h3>debugserver</h3>
 
-<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. This is dead easy to do - Xcode can install it for us.</p>
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. You&rsquo;ll need Xcode intalled on your Mac to do this.</p>
 
-<ul>
-<li>open Xcode and create a new project</li>
-<li>make sure the deployment target is low enough to run on the device</li>
-<li>debug the new app on the device</li>
-<li>Xcode will install <code>debugserver</code> for you</li>
-<li>check it&rsquo;s installed on the device:
+<p>First, take a look inside <code>/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/</code> - you&rsquo;ll see folders for different versions of iOS. Inside each folder is a <code>dmg</code> file (disk archive). Open the correct one for your version of iOS:</p>
 
-<ul>
-<li><code>ls -l /Developer/usr/bin/debugserver</code></li>
-</ul>
-</li>
-</ul>
+<p><code>hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg</code></p>
 
+<p>Then copy the <code>debugserver</code> binary somewhere:</p>
+
+<p><code>cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./</code></p>
+
+<p>Create a file called <code>entitlements.plist</code>:</p>
+
+<p><code>cat &gt; entitlements.plist</code></p>
+
+<p>&hellip; and paste in this content:</p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;com.apple.springboard.debugapplications&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;run-unsigned-code&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;get-task-allow&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;task_for_pid-allow&lt;/key&gt; &lt;true/&gt;
+&lt;/dict&gt; 
+&lt;/plist&gt;
+</code></pre>
+
+<p>Then close the file by pressing ^D (Control-D). Now re-sign <code>debugserver</code> with this new entitlements file:</p>
+
+<p><code>codesign -s - --entitlements entitlements.plist -f debugserver</code></p>
+
+<p>Finally, copy this re-signed <code>debugserver</code> binary to the device:</p>
+
+<p><code>tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
 
 <p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
 ]]></content>
@@ -122,6 +241,7 @@
 <ul>
 <li>Part 1: obtaining and jailbreaking a device</li>
 <li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 </ul>
 </blockquote>
 
@@ -179,7 +299,7 @@
 
 <ul>
 <li>to check: go to the <em>General -> Software Updates</em> part of the <em>Settings</em> app</li>
-<li>you should see the message <em>&ldquo;This update cannot be installed because it requies at least XXX MB of available storage&rdquo;</em>.</li>
+<li>you should see the message <em>&ldquo;This update cannot be installed because it requires at least XXX MB of available storage&rdquo;</em>.</li>
 </ul>
 </li>
 <li>you&rsquo;ll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space</li>

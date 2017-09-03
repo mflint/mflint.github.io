@@ -46,6 +46,7 @@
 <ul>
 <li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li>Part 2: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 </ul>
 </blockquote>
 
@@ -95,21 +96,51 @@
 
 <h3>debugserver</h3>
 
-<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. This is dead easy to do - Xcode can install it for us.</p>
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. You&rsquo;ll need Xcode intalled on your Mac to do this.</p>
 
-<ul>
-<li>open Xcode and create a new project</li>
-<li>make sure the deployment target is low enough to run on the device</li>
-<li>debug the new app on the device</li>
-<li>Xcode will install <code>debugserver</code> for you</li>
-<li>check it&rsquo;s installed on the device:
+<p>First, take a look inside <code>/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/</code> - you&rsquo;ll see folders for different versions of iOS. Inside each folder is a <code>dmg</code> file (disk archive). Open the correct one for your version of iOS:</p>
 
-<ul>
-<li><code>ls -l /Developer/usr/bin/debugserver</code></li>
-</ul>
-</li>
-</ul>
+<p><code>hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg</code></p>
 
+<p>Then copy the <code>debugserver</code> binary somewhere:</p>
+
+<p><code>cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./</code></p>
+
+<p>Create a file called <code>entitlements.plist</code>:</p>
+
+<p><code>cat &gt; entitlements.plist</code></p>
+
+<p>&hellip; and paste in this content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+</span><span class='line'>&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd"&gt;
+</span><span class='line'>&lt;plist version="1.0"&gt;
+</span><span class='line'>&lt;dict&gt;
+</span><span class='line'>    &lt;key&gt;com.apple.springboard.debugapplications&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;run-unsigned-code&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;get-task-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;task_for_pid-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>&lt;/dict&gt; 
+</span><span class='line'>&lt;/plist&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then close the file by pressing ^D (Control-D). Now re-sign <code>debugserver</code> with this new entitlements file:</p>
+
+<p><code>codesign -s - --entitlements entitlements.plist -f debugserver</code></p>
+
+<p>Finally, copy this re-signed <code>debugserver</code> binary to the device:</p>
+
+<p><code>tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
 
 <p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
 </div>

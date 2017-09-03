@@ -15,6 +15,7 @@ In this second part of the "hacking iOS apps" series, we'll perform some post-ja
 > 
 > * [Part 1][part1]: obtaining and jailbreaking a device
 > * Part 2: post-jailbreak stuff
+> * [Part 3][part3]: debugging apps with lldb
 
 ### Recap
 
@@ -47,18 +48,47 @@ The yalu jailbreak already includes the [Dropbear][Dropbear] ssh server, so no n
 
 ### debugserver
 
-In order to debug applications running on the device, we'll to install need the `debugserver` tool. This is dead easy to do - Xcode can install it for us.
+In order to debug applications running on the device, we'll to install need the `debugserver` tool. You'll need Xcode intalled on your Mac to do this.
 
-* open Xcode and create a new project
-* make sure the deployment target is low enough to run on the device
-* debug the new app on the device
-* Xcode will install `debugserver` for you
-* check it's installed on the device:
-  * `ls -l /Developer/usr/bin/debugserver`
+First, take a look inside `/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/` - you'll see folders for different versions of iOS. Inside each folder is a `dmg` file (disk archive). Open the correct one for your version of iOS:
+
+`hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg`
+
+Then copy the `debugserver` binary somewhere:
+
+`cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./`
+
+Create a file called `entitlements.plist`:
+
+`cat > entitlements.plist`
+
+... and paste in this content:
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.springboard.debugapplications</key> <true/>
+    <key>run-unsigned-code</key> <true/>
+    <key>get-task-allow</key> <true/>
+    <key>task_for_pid-allow</key> <true/>
+</dict> 
+</plist>
+```
+
+Then close the file by pressing ^D (Control-D). Now re-sign `debugserver` with this new entitlements file:
+
+`codesign -s - --entitlements entitlements.plist -f debugserver`
+
+Finally, copy this re-signed `debugserver` binary to the device:
+
+`tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'`
 
 Next time: we'll debug a running app, and make some runtime changes.
 
 
 [part1]: /ios-hacking-1/
+[part3]: /ios-hacking-3/
 [Dropbear]: https://matt.ucc.asn.au/dropbear/dropbear.html
 
