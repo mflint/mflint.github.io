@@ -17,6 +17,7 @@ Now we have a jailbroken phone with dev tools installed, it's time to start play
 > * [Part 2][part2]: post-jailbreak stuff
 > * Part 3: debugging apps with lldb
 > * [Part 4][part4]: altering apps at runtime with Cycript
+> * [Part 5][part5]: instrumentation and code-injection with Frida
 
 ### Debugging apps with `lldb`
 
@@ -95,4 +96,5 @@ If you want to continue using `lldb`, then do so - there's a ton of information 
 [part1]: /ios-hacking-1/
 [part2]: /ios-hacking-2/
 [part4]: /ios-hacking-4/
+[part5]: /ios-hacking-5/
 [lldb]: http://lldb.llvm.org

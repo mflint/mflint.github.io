@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: swift | Matthew's Dev Blog]]></title>
+  <link href="http://tthew.org/blog/categories/swift/atom.xml" rel="self"/>
+  <link href="http://tthew.org/"/>
+  <updated>2017-12-11T22:32:35+00:00</updated>
+  <id>http://tthew.org/</id>
+  <author>
+    <name><![CDATA[Matthew Flint]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 1)]]></title>
+    <link href="http://tthew.org/nearly-departed-rewrite-intro/"/>
+    <updated>2017-12-11T19:01:48+00:00</updated>
+    <id>http://tthew.org/rewriting-nearly-departed</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
+
+<ol>
+<li>it&rsquo;s written in Objective C, not Swift - and I desperately need some more exposure to Swift</li>
+<li>the code is difficult to maintain</li>
+<li>there are some features I want to add which can&rsquo;t easily be done with the current codebase</li>
+<li>fun</li>
+</ol>
+
+
+<p><a href="https://twitter.com/dwroboheadz">Someone</a> asked me to blog this, so here I am. This will hopefully chronicle the rewrite, until:</p>
+
+<ul>
+<li>I get bored of writing blogposts</li>
+<li>Dev stops, because I get distracted with something else, or</li>
+<li>It&rsquo;s released in the App Store</li>
+</ul>
+
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: background</li>
+</ul>
+</blockquote>
+
+<h3>Background</h3>
+
+<p><em>Nearly Departed</em> is an app to show live train departures in the UK. It doesn&rsquo;t do timetables, journey-planning or ticket purchases: just the live departures. It has an iOS app, of course, plus a today widget which can be accessed quickly from the iPhone lock screen. For a brief period, there was an Apple Watch <em>glance</em> too (until a WatchOS update broke the synchronisation mechanism).</p>
+
+<p>Here are some slightly old screenshots to show what it looks like:</p>
+
+<p><img class="left" src="/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
+
+<p>I wrote <em>Nearly Departed</em> in mid-2015, because I couldn&rsquo;t find a UK train departures app that I really liked. I was using <a href="https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8">&ldquo;UK Train Times&rdquo; by Agant</a>, which is a great app, but it wasn&rsquo;t quite right for me:</p>
+
+<ol>
+<li>the updates were infrequent and I was worried it would stop being supported</li>
+<li>there was no really quick way to access live-departure information (like an iOS today widget)</li>
+<li>no Apple Watch support</li>
+</ol>
+
+
+<p>If none of these things matter to you, then <em>UK Train Times</em> is well worth the purchase price.</p>
+
+<p>So, like any good developer, I started to write my own.</p>
+
+<h3>Feature summary</h3>
+
+<p>To give a little more context about the app, here are the major features:</p>
+
+<ul>
+<li>Show <em>live departure</em> information for pre-defined direct routes on the UK train network</li>
+<li>Display this information in iOS app or today widget</li>
+<li>Auto-reverse routes, based on time (morning/afternoon) or user&rsquo;s location (if location services are enabled)</li>
+</ul>
+
+
+<h3>Major releases</h3>
+
+<dl>
+<dt>1.0 (May 2015)</dt>
+<dd>First release; iOS app and today widget</dd>
+<dt>1.1 (June 2015)</dt>
+<dd>Apple Watch support and service alerts</dd>
+<dt>1.2 (July 2015)</dt>
+<dd>Many small UI tweaks</dd>
+<dt>1.3 (April 2016)</dt>
+<dd>Rail-replacement bus services; started work on supporting WatchOS 2</dd>
+<dt>1.4 (April 2016)</dt>
+<dd>Auto-reverse routes based on user&rsquo;s location, instead of using morning/afternoon</dd>
+<dt>1.5 (Septembet 2016)</dt>
+<dd>Shows route messages (ie, why this service is delayed or cancelled); removed Watch support</dd>
+<dt>1.6 (November 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.7 (January 2017)</dt>
+<dd>Today widget improvements</dd>
+<dt>1.8 (January 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.9 (March 2017)</dt>
+<dd>Show all departures from your nearest station (if location services are enabled)</dd>
+<dt>1.10 (August 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.11 (October 2017)</dt>
+<dd>Hides slow services by default</dd>
+</dl>
+
+<h3> Next</h3>
+
+<p>In the next post, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+]]></content>
+  </entry>
+  
+</feed>

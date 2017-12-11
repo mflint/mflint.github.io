@@ -24,6 +24,7 @@ In this first post, we'll acquire and jailbreak an iOS device.
 > * [Part 2][part2]: post-jailbreak stuff
 > * [Part 3][part3]: debugging apps with lldb
 > * [Part 4][part4]: altering apps at runtime with Cycript
+> * [Part 5][part5]: instrumentation and code-injection with Frida
 
 ### Acquiring a suitable iOS device
 First, some warnings:
@@ -94,6 +95,7 @@ That's enough for this post. In [the next post][part2], we'll install some neces
 [part2]: /ios-hacking-2/
 [part3]: /ios-hacking-3/
 [part4]: /ios-hacking-4/
+[part5]: /ios-hacking-5/
 [iPhoneWiki]: https://www.theiphonewiki.com/wiki/Jailbreak "the iPhone wiki"
 [yalu102]: https://yalu.qwertyoruiop.com "yalu102 beta 7"
 [CydiaImpactor]: http://www.cydiaimpactor.com "Cydia Impactor"

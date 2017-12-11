@@ -16,6 +16,7 @@ OK team, it gets slightly more exciting now: lets tweak an iOS app at runtime, u
 > * [Part 2][part2]: post-jailbreak stuff
 > * [Part 3][part3]: debugging apps with lldb
 > * Part 4: altering apps at runtime with Cycript
+> * [Part 5][part5]: instrumentation and code-injection with Frida
 
 ### What is Cycript?
 
@@ -96,6 +97,7 @@ Next time: we'll have play with [Frida][Frida], an instrumentation and code-inje
 [part1]: /ios-hacking-1/
 [part2]: /ios-hacking-2/
 [part3]: /ios-hacking-3/
+[part5]: /ios-hacking-5/
 [Cycript]: http://www.cycript.org
 [CycriptManual]: http://www.cycript.org/manual/
 [Frida]: https://www.frida.re

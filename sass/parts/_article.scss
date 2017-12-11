@@ -76,14 +76,24 @@ article{
 			//margin-top: 1.5em;
 			//margin-bottom: 1.5em;
 		}
-		ul, ol, dl{
+		ul, ol {
 			margin-left: 40px;
             margin-top: 10px;
-			ul, ol, dl{
+			ul, ol {
                 margin-left: 20px;
 				margin-top: 0;
 			}
 		}
+        dl {
+            padding-top: 10px;
+        }
+        dt {
+            font-weight: bold;
+        }
+        dd {
+            margin: 0 0 10px 20px;
+        }
+
 		strong{
 			font-weight: bold;
 		}
@@ -107,6 +117,7 @@ article{
 		}
 		
 		img, video{
+            margin: 15px 5px 15px 0px;
 			max-width: 100%;
 			height: auto;
 			-webkit-border-radius:5px;

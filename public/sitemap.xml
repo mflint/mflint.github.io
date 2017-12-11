@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
+<loc>http://tthew.org/nearly-departed-rewrite-intro/</loc>
+<lastmod>2017-12-11T19:01:48+00:00</lastmod>
+</url>
+<url>
+<loc>http://tthew.org/ios-hacking-5/</loc>
+<lastmod>2017-09-03T20:41:40+01:00</lastmod>
+</url>
+<url>
 <loc>http://tthew.org/ios-hacking-4/</loc>
 <lastmod>2017-09-03T11:58:24+01:00</lastmod>
 </url>
@@ -17,16 +25,16 @@
 <lastmod>2017-09-02T09:30:56+01:00</lastmod>
 </url>
 <url>
-<loc>http://tthew.org/archives/</loc>
+<loc>http://tthew.org/</loc>
 </url>
 <url>
-<loc>http://tthew.org/blog/archives/</loc>
+<loc>http://tthew.org/archives/</loc>
 </url>
 <url>
 <loc>http://tthew.org/blog/</loc>
 </url>
 <url>
-<loc>http://tthew.org/</loc>
+<loc>http://tthew.org/blog/archives/</loc>
 </url>
 <url>
 <loc>http://tthew.org/about/</loc>
@@ -36,5 +44,8 @@
 </url>
 <url>
 <loc>http://tthew.org/blog/categories/jailbreaking/</loc>
+</url>
+<url>
+<loc>http://tthew.org/blog/categories/swift/</loc>
 </url>
 </urlset>

@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-03T18:55:28+01:00</updated>
+  <updated>2017-12-11T22:32:35+00:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,233 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 1)]]></title>
+    <link href="http://tthew.org/nearly-departed-rewrite-intro/"/>
+    <updated>2017-12-11T19:01:48+00:00</updated>
+    <id>http://tthew.org/rewriting-nearly-departed</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
+
+<ol>
+<li>it&rsquo;s written in Objective C, not Swift - and I desperately need some more exposure to Swift</li>
+<li>the code is difficult to maintain</li>
+<li>there are some features I want to add which can&rsquo;t easily be done with the current codebase</li>
+<li>fun</li>
+</ol>
+
+
+<p><a href="https://twitter.com/dwroboheadz">Someone</a> asked me to blog this, so here I am. This will hopefully chronicle the rewrite, until:</p>
+
+<ul>
+<li>I get bored of writing blogposts</li>
+<li>Dev stops, because I get distracted with something else, or</li>
+<li>It&rsquo;s released in the App Store</li>
+</ul>
+
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://tthew.org/nearly-departed-rewrite-intro/">Part 1</a>: background</li>
+</ul>
+</blockquote>
+
+<h3>Background</h3>
+
+<p><em>Nearly Departed</em> is an app to show live train departures in the UK. It doesn&rsquo;t do timetables, journey-planning or ticket purchases: just the live departures. It has an iOS app, of course, plus a today widget which can be accessed quickly from the iPhone lock screen. For a brief period, there was an Apple Watch <em>glance</em> too (until a WatchOS update broke the synchronisation mechanism).</p>
+
+<p>Here are some slightly old screenshots to show what it looks like:</p>
+
+<p><img class="left" src="http://tthew.org/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://tthew.org/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://tthew.org/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
+
+<p>I wrote <em>Nearly Departed</em> in mid-2015, because I couldn&rsquo;t find a UK train departures app that I really liked. I was using <a href="https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8">&ldquo;UK Train Times&rdquo; by Agant</a>, which is a great app, but it wasn&rsquo;t quite right for me:</p>
+
+<ol>
+<li>the updates were infrequent and I was worried it would stop being supported</li>
+<li>there was no really quick way to access live-departure information (like an iOS today widget)</li>
+<li>no Apple Watch support</li>
+</ol>
+
+
+<p>If none of these things matter to you, then <em>UK Train Times</em> is well worth the purchase price.</p>
+
+<p>So, like any good developer, I started to write my own.</p>
+
+<h3>Feature summary</h3>
+
+<p>To give a little more context about the app, here are the major features:</p>
+
+<ul>
+<li>Show <em>live departure</em> information for pre-defined direct routes on the UK train network</li>
+<li>Display this information in iOS app or today widget</li>
+<li>Auto-reverse routes, based on time (morning/afternoon) or user&rsquo;s location (if location services are enabled)</li>
+</ul>
+
+
+<h3>Major releases</h3>
+
+<dl>
+<dt>1.0 (May 2015)</dt>
+<dd>First release; iOS app and today widget</dd>
+<dt>1.1 (June 2015)</dt>
+<dd>Apple Watch support and service alerts</dd>
+<dt>1.2 (July 2015)</dt>
+<dd>Many small UI tweaks</dd>
+<dt>1.3 (April 2016)</dt>
+<dd>Rail-replacement bus services; started work on supporting WatchOS 2</dd>
+<dt>1.4 (April 2016)</dt>
+<dd>Auto-reverse routes based on user&rsquo;s location, instead of using morning/afternoon</dd>
+<dt>1.5 (Septembet 2016)</dt>
+<dd>Shows route messages (ie, why this service is delayed or cancelled); removed Watch support</dd>
+<dt>1.6 (November 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.7 (January 2017)</dt>
+<dd>Today widget improvements</dd>
+<dt>1.8 (January 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.9 (March 2017)</dt>
+<dd>Show all departures from your nearest station (if location services are enabled)</dd>
+<dt>1.10 (August 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.11 (October 2017)</dt>
+<dd>Hides slow services by default</dd>
+</dl>
+
+<h3> Next</h3>
+
+<p>In the next post, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 5)]]></title>
+    <link href="http://tthew.org/ios-hacking-5/"/>
+    <updated>2017-09-03T20:41:40+01:00</updated>
+    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-5</id>
+    <content type="html"><![CDATA[<p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 5 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li>Part 5: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Frida?</h3>
+
+<p><a href="https://www.frida.re">Frida</a> is a dynamic code instrumentation and injection toolkit. We can use it to monitor what&rsquo;s going on while an app is running, intercept function calls and perform arbitrary operations.</p>
+
+<h3>Frida installation</h3>
+
+<p>There&rsquo;s a <a href="https://www.frida.re/docs/ios/">complete set of installation instructions on the Frida website</a>, but here&rsquo;s the tl;dr:</p>
+
+<ul>
+<li>open <em>Cydia</em> on the jailbroken device</li>
+<li>select the <em>Sources</em> tab</li>
+<li>Edit, then Add a new source: <code>https://build.frida.re</code></li>
+<li>Now you should be able to search for <code>Frida</code> and install it</li>
+</ul>
+
+
+<p>Finally, on your Mac, install the Frida client:</p>
+
+<p><code>pip install --user frida</code></p>
+
+<h3>Testing the installation</h3>
+
+<p>Connect the device to your Mac over USB, then as Frida for a list of running applications on the device:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Mac:~ matthew$ frida-ps -Ua
+</span><span class='line'>PID  Name   Identifier          
+</span><span class='line'>---  -----  --------------------
+</span><span class='line'>519  Cydia  com.saurik.Cydia    
+</span><span class='line'>379  Mail   com.apple.mobilemail</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Instrumenting function calls in a 3rd-party app</h3>
+
+<p>I&rsquo;ve installed the <a href="https://itunes.apple.com/gb/app/amazon/id335187483?mt=8">Amazon UK app</a> on the device, and we&rsquo;ll see what we can discover about how logins are performed. For this, we&rsquo;ll use <a href="https://www.frida.re/docs/frida-trace/">frida-trace</a>.</p>
+
+<ul>
+<li>start the Amazon app on the device</li>
+<li>it looks like the &ldquo;Sign In&rdquo; feature happens in a modal ViewController - so we&rsquo;ll try looking for <code>viewWillAppear:</code> calls:
+
+<ul>
+<li><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* viewWillAppear*]"</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>&hellip; which gives this output when we tap the <em>Sign In</em> button:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> 13506 ms  -[AWModalNavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13506 ms     | -[UINavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13507 ms     |    | -[UIViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms  -[AIWebViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms     | -[UIViewController viewWillAppear:0x1 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hmm, <code>AIWebViewController</code>. Are they using an embedded <code>UIWebView</code>? Let&rsquo;s check:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView *]"</code></p>
+
+<p>Whoa, loads of output there too. But a <code>UIWebView</code> which performs a login is useless without a delegate to pass information back to. We should find it.</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView setDelegate:]"</code></p>
+
+<p>&hellip; which shows this when we tap <em>Sign In</em>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Instrumenting functions...                                              
+</span><span class='line'>-[UIWebView setDelegate:]: Loaded handler at "/Users/matthew/Dev/Temp/__handlers__/__UIWebView_setDelegate__.js"
+</span><span class='line'>Started tracing 1 function. Press Ctrl+C to stop.                       
+</span><span class='line'>           /* TID 0x503 */
+</span><span class='line'>  5608 ms  -[UIWebView setDelegate:0x1026737c0 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So we have a delegate being set, but no idea what kind of object that is. It probably doesn&rsquo;t matter, because we can easily hook into <a href="https://developer.apple.com/documentation/uikit/uiwebviewdelegate">the callback functions in the <code>UIWebViewDelegate</code> protocol</a>. We&rsquo;ll try hooking into <code>webView:shouldStartLoadWith:navigationType:</code>:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* *shouldStartLoadWith*]"</code></p>
+
+<p>And sure enough, this is logged every time the <em>Sign In</em> webpage loads content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  7081 ms  -[AIWebViewController webView:0x102508130 shouldStartLoadWithRequest:0x170206510 navigationType:0x5 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The second parameter to that call is an <code>NSURLRequest</code>. I&rsquo;d love to see what&rsquo;s in there - and we can do just that, by editing Frida&rsquo;s JavaScript hooks. Frida kindly generates some template hooks for us. The one we want is <code>__handlers__/__AIWebViewController_webView_sh_-4df00585.js</code>. (Yours may be named slightly differently)</p>
+
+<p>If we edit this file, we can see how that previous piece of logging was performed: there are two hooks, for when the function starts (<code>onEnter</code>) and finishes (<code>onLeave</code>).</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
@@ -30,6 +257,7 @@
 <li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li>Part 4: altering apps at runtime with Cycript</li>
+<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -154,6 +382,7 @@
 <li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li>Part 3: debugging apps with lldb</li>
 <li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -290,6 +519,7 @@
 <li>Part 2: post-jailbreak stuff</li>
 <li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -416,6 +646,7 @@
 <li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 

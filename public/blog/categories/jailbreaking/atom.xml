@@ -4,7 +4,7 @@
   <title><![CDATA[Category: jailbreaking | Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/blog/categories/jailbreaking/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-09-03T18:55:28+01:00</updated>
+  <updated>2017-12-11T22:32:35+00:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,114 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 5)]]></title>
+    <link href="http://tthew.org/ios-hacking-5/"/>
+    <updated>2017-09-03T20:41:40+01:00</updated>
+    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-5</id>
+    <content type="html"><![CDATA[<p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 5 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li>Part 5: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Frida?</h3>
+
+<p><a href="https://www.frida.re">Frida</a> is a dynamic code instrumentation and injection toolkit. We can use it to monitor what&rsquo;s going on while an app is running, intercept function calls and perform arbitrary operations.</p>
+
+<h3>Frida installation</h3>
+
+<p>There&rsquo;s a <a href="https://www.frida.re/docs/ios/">complete set of installation instructions on the Frida website</a>, but here&rsquo;s the tl;dr:</p>
+
+<ul>
+<li>open <em>Cydia</em> on the jailbroken device</li>
+<li>select the <em>Sources</em> tab</li>
+<li>Edit, then Add a new source: <code>https://build.frida.re</code></li>
+<li>Now you should be able to search for <code>Frida</code> and install it</li>
+</ul>
+
+
+<p>Finally, on your Mac, install the Frida client:</p>
+
+<p><code>pip install --user frida</code></p>
+
+<h3>Testing the installation</h3>
+
+<p>Connect the device to your Mac over USB, then as Frida for a list of running applications on the device:</p>
+
+<pre><code>Mac:~ matthew$ frida-ps -Ua
+PID  Name   Identifier          
+---  -----  --------------------
+519  Cydia  com.saurik.Cydia    
+379  Mail   com.apple.mobilemail
+</code></pre>
+
+<h3>Instrumenting function calls in a 3rd-party app</h3>
+
+<p>I&rsquo;ve installed the <a href="https://itunes.apple.com/gb/app/amazon/id335187483?mt=8">Amazon UK app</a> on the device, and we&rsquo;ll see what we can discover about how logins are performed. For this, we&rsquo;ll use <a href="https://www.frida.re/docs/frida-trace/">frida-trace</a>.</p>
+
+<ul>
+<li>start the Amazon app on the device</li>
+<li>it looks like the &ldquo;Sign In&rdquo; feature happens in a modal ViewController - so we&rsquo;ll try looking for <code>viewWillAppear:</code> calls:
+
+<ul>
+<li><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* viewWillAppear*]"</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>&hellip; which gives this output when we tap the <em>Sign In</em> button:</p>
+
+<pre><code> 13506 ms  -[AWModalNavigationController viewWillAppear:0x1 ]
+ 13506 ms     | -[UINavigationController viewWillAppear:0x1 ]
+ 13507 ms     |    | -[UIViewController viewWillAppear:0x1 ]
+ 13517 ms  -[AIWebViewController viewWillAppear:0x1 ]
+ 13517 ms     | -[UIViewController viewWillAppear:0x1 ]
+</code></pre>
+
+<p>Hmm, <code>AIWebViewController</code>. Are they using an embedded <code>UIWebView</code>? Let&rsquo;s check:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView *]"</code></p>
+
+<p>Whoa, loads of output there too. But a <code>UIWebView</code> which performs a login is useless without a delegate to pass information back to. We should find it.</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView setDelegate:]"</code></p>
+
+<p>&hellip; which shows this when we tap <em>Sign In</em>:</p>
+
+<pre><code>Instrumenting functions...                                              
+-[UIWebView setDelegate:]: Loaded handler at "/Users/matthew/Dev/Temp/__handlers__/__UIWebView_setDelegate__.js"
+Started tracing 1 function. Press Ctrl+C to stop.                       
+           /* TID 0x503 */
+  5608 ms  -[UIWebView setDelegate:0x1026737c0 ]
+</code></pre>
+
+<p>So we have a delegate being set, but no idea what kind of object that is. It probably doesn&rsquo;t matter, because we can easily hook into <a href="https://developer.apple.com/documentation/uikit/uiwebviewdelegate">the callback functions in the <code>UIWebViewDelegate</code> protocol</a>. We&rsquo;ll try hooking into <code>webView:shouldStartLoadWith:navigationType:</code>:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* *shouldStartLoadWith*]"</code></p>
+
+<p>And sure enough, this is logged every time the <em>Sign In</em> webpage loads content:</p>
+
+<pre><code>  7081 ms  -[AIWebViewController webView:0x102508130 shouldStartLoadWithRequest:0x170206510 navigationType:0x5 ]
+</code></pre>
+
+<p>The second parameter to that call is an <code>NSURLRequest</code>. I&rsquo;d love to see what&rsquo;s in there - and we can do just that, by editing Frida&rsquo;s JavaScript hooks. Frida kindly generates some template hooks for us. The one we want is <code>__handlers__/__AIWebViewController_webView_sh_-4df00585.js</code>. (Yours may be named slightly differently)</p>
+
+<p>If we edit this file, we can see how that previous piece of logging was performed: there are two hooks, for when the function starts (<code>onEnter</code>) and finishes (<code>onLeave</code>).</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
@@ -30,6 +138,7 @@
 <li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li>Part 4: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -125,6 +234,7 @@ label5.text=@"\ud83d\udca9"
 <li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li>Part 3: debugging apps with lldb</li>
 <li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -224,6 +334,7 @@ Process 717 resuming
 <li>Part 2: post-jailbreak stuff</li>
 <li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -340,6 +451,7 @@ Process 717 resuming
 <li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
