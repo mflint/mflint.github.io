@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Rewriting Nearly Departed (part 1)"
+title: "Rewriting Nearly Departed (part 1: intro)"
 date: 2017-12-11 19:01:48 +0000
 comments: true
 categories: [swift]
@@ -23,7 +23,8 @@ I'm re-writing one of my apps, [Nearly Departed][itunes], in Swift. There are fo
 
 > This is part 1 of a multi-part series:
 >
-> * [Part 1][part1]: background
+> * Part 1: intro
+> * [Part 2][part2]: tech background
 
 ### Background
 
@@ -71,7 +72,7 @@ To give a little more context about the app, here are the major features:
 1.4 (April 2016)
 : Auto-reverse routes based on user's location, instead of using morning/afternoon
 
-1.5 (Septembet 2016)
+1.5 (September 2016)
 : Shows route messages (ie, why this service is delayed or cancelled); removed Watch support
 
 1.6 (November 2017)
@@ -92,7 +93,6 @@ To give a little more context about the app, here are the major features:
 1.11 (October 2017)
 : Hides slow services by default
 
-
 ### Next
 
 In the next post, I'll discuss the technical implementation of the app, which should start to explain why I'm rewriting it.
@@ -103,4 +103,5 @@ In the next post, I'll discuss the technical implementation of the app, which sh
 [agant-app]: https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8
 
 [part1]: /nearly-departed-rewrite-intro/
+[part2]: /nearly-departed-rewrite-tech-background/
 
