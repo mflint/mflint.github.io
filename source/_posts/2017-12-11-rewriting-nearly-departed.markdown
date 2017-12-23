@@ -25,6 +25,7 @@ I'm re-writing one of my apps, [Nearly Departed][itunes], in Swift. There are fo
 >
 > * Part 1: intro
 > * [Part 2][part2]: tech background
+> * [Part 3][part3]: rewrite plans
 
 ### Background
 
@@ -91,11 +92,11 @@ To give a little more context about the app, here are the major features:
 : Station updates
 
 1.11 (October 2017)
-: Hides slow services by default
+: Hides slow services by default, after one user used a circular route the wrong way and took several hours to get home
 
 ### Next
 
-In the next post, I'll discuss the technical implementation of the app, which should start to explain why I'm rewriting it.
+In the [next post][part2], I'll discuss the technical implementation of the app, which should start to explain why I'm rewriting it.
 
 
 [someone]: https://twitter.com/dwroboheadz
@@ -104,4 +105,5 @@ In the next post, I'll discuss the technical implementation of the app, which sh
 
 [part1]: /nearly-departed-rewrite-intro/
 [part2]: /nearly-departed-rewrite-tech-background/
+[part3]: /nearly-departed-rewrite-plans/
 

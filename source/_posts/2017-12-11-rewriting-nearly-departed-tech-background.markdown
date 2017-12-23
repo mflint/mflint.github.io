@@ -15,6 +15,7 @@ This post will give a little of the technical background to _Nearly Departed_ an
 >
 > * [Part 1][part1]: intro
 > * Part 2: tech background
+> * [Part 3][part3]: rewrite plans
 
 ### Headline tech features
 
@@ -65,14 +66,14 @@ The data itself comes from two sources:
 `RailReferences.csv`
 : [from the UK Government NaPTAN dataset][naptan]
 
-`station_codes.csv` is simply a list of station names and their CRS codes, whereas `RailReferences.csv` has location data too in [easting/northing][easting-northing] format. Unfortunately the data doesn't completely match between those two files, so I have a Ruby script which does a few things:
+`station_codes.csv` is simply a list of station names and their CRS codes, whereas `RailReferences.csv` also has location data in [easting/northing][easting-northing] format. Unfortunately the data doesn't completely match between those two files, so I have a Ruby script which does a few things:
 
 * matches data from the `station_codes.csv` and `RailReferences.csv` files
 * corrects inconsistencies between the two files (NaPTAN often has incorrect CSR codes)
 * adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn't yet been updated)
 * filters out some non-mainline stations (such as heritage rail or ferry terminals)
 * converts easting/northing locations to latitude/longitude
-* creates a two-dimenaional binary tree based on station locations, and writes it to a 670K `.plist` file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.
+* creates a two-dimensional binary tree based on station locations, and writes it to a 670K `.plist` file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.
 
 The app reads this plist into memory in its tree structure for location searches, and flattens it to an array for name/CRS searches.
 
@@ -84,7 +85,7 @@ The app reads this plist into memory in its tree structure for location searches
 
 ### Next
 
-In the next post, I'll discuss my high-level plans for the rewrite.
+In the [next post][part3], I'll discuss my high-level plans for the rewrite.
 
 [mvvm]: https://en.wikipedia.org/wiki/Model–view–viewmodel
 [objection]: http://objection-framework.org
@@ -97,4 +98,5 @@ In the next post, I'll discuss my high-level plans for the rewrite.
 
 [part1]: /nearly-departed-rewrite-intro/
 [part2]: /nearly-departed-rewrite-tech-background/
+[part3]: /nearly-departed-rewrite-plans/
 

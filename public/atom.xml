@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://tthew.org/atom.xml" rel="self"/>
   <link href="http://tthew.org/"/>
-  <updated>2017-12-12T01:16:17+00:00</updated>
+  <updated>2017-12-23T22:06:55+00:00</updated>
   <id>http://tthew.org/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,117 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 3: rewrite plans)]]></title>
+    <link href="http://tthew.org/nearly-departed-rewrite-plans/"/>
+    <updated>2017-12-12T01:26:14+00:00</updated>
+    <id>http://tthew.org/rewriting-nearly-departed-rewrite-plans</id>
+    <content type="html"><![CDATA[<p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://tthew.org/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="http://tthew.org/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li>Part 3: rewrite plans</li>
+</ul>
+</blockquote>
+
+<h3>Goals</h3>
+
+<ul>
+<li>Rewrite in Swift</li>
+<li>&hellip; in a <em>Swifty</em> way</li>
+<li>With a decent set of unit tests</li>
+<li>Same features as the existing app:
+
+<ul>
+<li>departure boards (all departures from a station)</li>
+<li>station alerts (problems with services in this area)</li>
+<li>service alerts (problems with this particular service)</li>
+</ul>
+</li>
+<li>New features:
+
+<ul>
+<li>Show service details (the progress of an individual service during its journey)</li>
+<li>Reinstate Apple Watch support</li>
+<li>Architect the code so it wouldn&rsquo;t be impossible to add different datasources in the future</li>
+</ul>
+</li>
+</ul>
+
+
+<h3>Non-goals</h3>
+
+<ul>
+<li>Making money - this is primarily a learning exercise</li>
+</ul>
+
+
+<h3>Data models</h3>
+
+<p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
+
+<ol>
+<li>Explicitly, via the iOS app. (example: all departures from York to Leeds would be an instance of <code>DarwinDeparturesRoute</code>)</li>
+<li>Implicitly, from another route. (example: when viewing departures from York to Leeds, they might tap on a service to see its progress. This <code>DarwinServiceRoute</code> would be created automatically, containing the <code>serviceID</code> for the selected service)</li>
+</ol>
+
+
+<p>There is also a <code>NoRoutesRoute</code>. I&rsquo;m starting to develop an irrational dislike of optionals, so try to avoid them wherever I can. So if the user hasn&rsquo;t yet created any routes, we have a <code>NoRoutesRoute</code> there instead. (Thanks to <a href="https://twitter.com/kevinrutherford">Kevin Rutherford</a> for the inspiration to go down this route, with his &ldquo;write a program with no if statements&rdquo; kata)</p>
+
+<p>We need something to manage our collection of routes, and that&rsquo;s in the <code>RouteManager</code>. The user&rsquo;s <em>explicit</em> routes are stored in a collection, but we also allow other routes to pushed to form a stack, so the user can drill-down from one result to another.</p>
+
+<p>This might seem complex, but it allows the user to manage scenarios like this:</p>
+
+<ul>
+<li>User travelling from A to B, then B to C</li>
+<li>User creates explicit routes &ldquo;A to B&rdquo; and &ldquo;B to C&rdquo;</li>
+<li>When starting their journey, they select route &ldquo;A to B&rdquo; to see if their service is on-time</li>
+<li>Then they tap on the <em>service</em> to create an implicit Service route, which is popped onto the stack. They use this to track the progress of the service they&rsquo;re travelling on</li>
+<li>But they also want to see if the &ldquo;B to C&rdquo; service is running OK</li>
+<li>So they select the &ldquo;B to C&rdquo; route, and tap on a service to create a second implicit Service route, which is popped onto <em>that</em> stack</li>
+<li>Then they can switch between stacks, to keep track of both <em>services</em></li>
+</ul>
+
+
+<script src="http://tthew.org/javascripts/mermaid.min.js"></script>
+
+
+<div class="mermaid">
+graph LR
+RM[RouteManager]-->E1["Explicit route 1<br/>(example: A to B)"]
+RM[RouteManager]-->E2["Explicit route 2<br/>(example: B to C)"]
+subgraph stack
+E2-->I2["Implicit pushed route<br/>(example: 08:45 service from B to C)"]
+end
+subgraph stack
+E1-->I1["Implicit pushed route<br/>(example: 08:00 service from A to B)"]
+end
+</div>
+
+
+<p>This collection of stacks is stored in shared <code>UserDefaults</code>, so you could push a new route using the iPhone and then view its results on the Apple Watch.</p>
+
+<p><strong>Next, we&rsquo;ll need to get fetch data from an API</strong> for each type of route using <code>Entity</code> types which can fetch a particular kind of data. Right now there are two, but there could be more in the future:</p>
+
+<dl>
+<dt><code>DarwinDeparturesEntity</code></dt>
+<dd>gets OpenLDBWS departure boards for services between two stations (departures from station A calling at station B)</dd>
+<dt><code>DarwinServiceEntity</code></dt>
+<dd>gets OpenLDBWS service information (which returns the arrival/departure times for a service at each calling-point)</dd>
+</dl>
+
+<p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
+
+<p>In the next post, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rewriting Nearly Departed (part 2: tech background)]]></title>
@@ -28,6 +139,7 @@
 <ul>
 <li><a href="http://tthew.org/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
 <li>Part 2: tech background</li>
+<li><a href="http://tthew.org/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
 </ul>
 </blockquote>
 
@@ -101,7 +213,7 @@
 <dd><a href="https://data.gov.uk/dataset/naptan">from the UK Government NaPTAN dataset</a></dd>
 </dl>
 
-<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> has location data too in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
+<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> also has location data in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
 
 <ul>
 <li>matches data from the <code>station_codes.csv</code> and <code>RailReferences.csv</code> files</li>
@@ -109,7 +221,7 @@
 <li>adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn&rsquo;t yet been updated)</li>
 <li>filters out some non-mainline stations (such as heritage rail or ferry terminals)</li>
 <li>converts easting/northing locations to latitude/longitude</li>
-<li>creates a two-dimenaional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
+<li>creates a two-dimensional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
 </ul>
 
 
@@ -126,7 +238,7 @@
 
 <h3>Next</h3>
 
-<p>In the next post, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+<p>In the <a href="http://tthew.org/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
 ]]></content>
   </entry>
   
@@ -162,6 +274,7 @@
 <ul>
 <li>Part 1: intro</li>
 <li><a href="http://tthew.org/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="http://tthew.org/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
 </ul>
 </blockquote>
 
@@ -225,12 +338,12 @@
 <dt>1.10 (August 2017)</dt>
 <dd>Station updates</dd>
 <dt>1.11 (October 2017)</dt>
-<dd>Hides slow services by default</dd>
+<dd>Hides slow services by default, after one user used a circular route the wrong way and took several hours to get home</dd>
 </dl>
 
 <h3> Next</h3>
 
-<p>In the next post, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+<p>In the <a href="http://tthew.org/nearly-departed-rewrite-tech-background/">next post</a>, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
 ]]></content>
   </entry>
   

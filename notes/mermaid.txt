@@ -1,0 +1,25 @@
+See: http://mostlyblather.com/blog/2015/05/23/mermaid-jekyll-octopress/
+
+---
+
+Mermaid provides “generation of diagrams and flowcharts from text in a similar manner as markdown”. I wanted to add charting support to the blog (running on Octopress), these are the steps I took to get things working.
+
+download
+
+The best place I found to download mermaid is the dist folder (https://github.com/knsv/mermaid/tree/master/dist) of the mermaid github repo.
+
+mermaid.full.min.js to /source/javascripts/mermaid.full.min.js
+mermaid.css to /source/stylesheets/mermaid.css
+integrate
+
+I found the (jekyll-mermaid)[https://github.com/jasonbellamy/jekyll-mermaid] plugin and installed it.
+
+In addition to the instructions on the plugin page I had to mannuall add an entry into the Gemfile for rake to pick it up:
+
+group :development do
+  gem 'rake', '~> 10.0'
+  gem 'jekyll', '~> 2.0'
+  # ...snip
+  gem 'jekyll-mermaid', '~> 1.0.0'
+end
+

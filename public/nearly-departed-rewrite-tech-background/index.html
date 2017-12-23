@@ -15,6 +15,7 @@
 	<link rel="canonical" href="">
 	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
 	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
 	
 	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 	
@@ -46,6 +47,7 @@
 <ul>
 <li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
 <li>Part 2: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
 </ul>
 </blockquote>
 
@@ -119,7 +121,7 @@
 <dd><a href="https://data.gov.uk/dataset/naptan">from the UK Government NaPTAN dataset</a></dd>
 </dl>
 
-<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> has location data too in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
+<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> also has location data in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
 
 <ul>
 <li>matches data from the <code>station_codes.csv</code> and <code>RailReferences.csv</code> files</li>
@@ -127,7 +129,7 @@
 <li>adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn&rsquo;t yet been updated)</li>
 <li>filters out some non-mainline stations (such as heritage rail or ferry terminals)</li>
 <li>converts easting/northing locations to latitude/longitude</li>
-<li>creates a two-dimenaional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
+<li>creates a two-dimensional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
 </ul>
 
 
@@ -144,7 +146,7 @@
 
 <h3>Next</h3>
 
-<p>In the next post, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+<p>In the <a href="/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
 </div>
 
 
