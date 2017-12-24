@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2017-12-24T00:38:34+00:00</updated>
+  <updated>2017-12-24T00:48:57+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -228,6 +228,29 @@ end
 </dl>
 
 <p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
+
+<p>There are three other <code>ResultSet</code> objects:</p>
+
+<dl>
+<dt><code>NoRoutesResultSet</code></dt>
+<dd>this is used when there are no routes defined in the app</dd>
+<dt><code>LoadingResultSet</code></dt>
+<dd>this is returned from Entities when they&rsquo;re fetching data for the first time</dd>
+<dt><code>ErrorResultSet</code></dt>
+<dd>returned from Entities if an error occurred while fetching or parsing data</dd>
+</dl>
+
+<p>With these three extra <code>ResultSet</code> objects I can define the Entity&rsquo;s <code>resultSet</code> property as non-optional:</p>
+
+<figure class='code'><figcaption><span>Entity.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">public</span> <span class="k">protocol</span> <span class="n">Entity</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">var</span> <span class="nl">resultSet</span><span class="p">:</span> <span class="n">ResultSet</span> <span class="p">{</span> <span class="kr">get</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
 ]]></content>

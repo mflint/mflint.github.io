@@ -116,6 +116,22 @@ This collection of stacks is stored in shared `UserDefaults`, so you could push 
 
 **Which brings us to _results_.** Each type of route has a corresponding `ResultSet` containing a collection of `Result` objects. Those `Result` objects can represent either a _service departing from a station_, or a _calling point for a single service_. And - to enable the user to drill-down - each `Result` can have provide a child `Route`, which defines the next query.
 
+There are three other `ResultSet` objects:
+
+`NoRoutesResultSet`
+: this is used when there are no routes defined in the app
+`LoadingResultSet`
+: this is returned from Entities when they're fetching data for the first time
+`ErrorResultSet`
+: returned from Entities if an error occurred while fetching or parsing data
+
+With these three extra `ResultSet` objects I can define the Entity's `resultSet` property as non-optional:
+
+{% codeblock lang:swift Entity.swift %}
+public protocol Entity {
+    var resultSet: ResultSet { get }
+}{% endcodeblock %}
+
 
 In the [next post][part4], I'll describe how route definitions are stored, and how they're synchronised between iPhone and Watch.
 
