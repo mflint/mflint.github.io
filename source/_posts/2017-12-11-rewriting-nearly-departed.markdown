@@ -3,7 +3,7 @@ layout: post
 title: "Rewriting Nearly Departed (part 1: intro)"
 date: 2017-12-11 19:01:48 +0000
 comments: true
-categories: [swift]
+categories: [swift, nearlydeparted]
 permalink: /nearly-departed-rewrite-intro/
 ---
 I'm re-writing one of my apps, [Nearly Departed][itunes], in Swift. There are four main reasons for this:
@@ -26,6 +26,7 @@ I'm re-writing one of my apps, [Nearly Departed][itunes], in Swift. There are fo
 > * Part 1: intro
 > * [Part 2][part2]: tech background
 > * [Part 3][part3]: rewrite plans
+> * [Part 4][part4]: storage and sync
 
 ### Background
 
@@ -106,4 +107,5 @@ In the [next post][part2], I'll discuss the technical implementation of the app,
 [part1]: /nearly-departed-rewrite-intro/
 [part2]: /nearly-departed-rewrite-tech-background/
 [part3]: /nearly-departed-rewrite-plans/
+[part4]: /nearly-departed-rewrite-storage-and-sync/
 

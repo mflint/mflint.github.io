@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Matthew's Dev Blog]]></title>
-  <link href="http://tthew.org/atom.xml" rel="self"/>
-  <link href="http://tthew.org/"/>
-  <updated>2017-12-23T22:06:55+00:00</updated>
-  <id>http://tthew.org/</id>
+  <link href="http://daringsnowball.net/atom.xml" rel="self"/>
+  <link href="http://daringsnowball.net/"/>
+  <updated>2017-12-24T00:38:34+00:00</updated>
+  <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
     
@@ -14,10 +14,81 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 4: storage and sync)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/"/>
+    <updated>2017-12-23T22:16:29+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-storage-and-sync</id>
+    <content type="html"><![CDATA[<p>This post gives an overview about how <em>Nearly Departed</em> Routes are stored and synced between iPhone and Apple Watch.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li>Part 2: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Route storage</h3>
+
+<p>Routes are stored in <code>UserDefaults</code> on the iPhone, and shared with the Watch using <em>WatchConnectivity</em>. To keep things simple, I have a <code>Storing</code> protocol for storing preferences and two implementations - one for the iPhone and one for the Watch.</p>
+
+<p>The iPhone implementation stores preferences in <code>UserDefaults</code> and also sends things to the Watch. The Watch implementation simply talks to its counterpart on the iPhone.</p>
+
+<p>After some experimentation (and help from <a href="https://developer.apple.com/library/content/documentation/General/Conceptual/WatchKitProgrammingGuide/SharingData.html">Apple&rsquo;s WatchConnectivity documentation</a> and <a href="https://kristina.io/watchos-2-how-to-communicate-between-devices-using-watch-connectivity/">Kristina Fox&rsquo;s blog</a>), I settled on this communication strategy:</p>
+
+<blockquote><ul>
+<li><p>When the Watch app first starts, it requests the current preferences by sending a &ldquo;get&rdquo; command to the iPhone via <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">([</span><span class="s">&quot;cmd&quot;</span> <span class="o">:</span> <span class="s">&quot;get&quot;</span><span class="p">],</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle reply from phone</span>
+</span><span class='line'>  <span class="p">})</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the iPhone, it sends data to the Watch by updating the <em>Application Context</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">updateApplicationContext</span><span class="p">(</span><span class="n">prefs</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the Watch, it sends data to the iPhone using <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="n">prefs</span><span class="p">,</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="nb">nil</span><span class="p">,</span> <span class="nl">errorHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+</ul>
+</blockquote>
+
+<p>This strategy seems to work well; both <em>Application Context</em> and <em>Interactive Messaging</em> work reliably, and quickly. (I&rsquo;m testing with iOS 11.2 and WatchOS 4.2)</p>
+
+<h3>Phone dependence</h3>
+
+<p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Rewriting Nearly Departed (part 3: rewrite plans)]]></title>
-    <link href="http://tthew.org/nearly-departed-rewrite-plans/"/>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-plans/"/>
     <updated>2017-12-12T01:26:14+00:00</updated>
-    <id>http://tthew.org/rewriting-nearly-departed-rewrite-plans</id>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-rewrite-plans</id>
     <content type="html"><![CDATA[<p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
 
 <!-- more -->
@@ -26,9 +97,10 @@
 <blockquote><p>This is part 3 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
-<li><a href="http://tthew.org/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
 <li>Part 3: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
 </ul>
 </blockquote>
 
@@ -64,6 +136,43 @@
 </ul>
 
 
+<h3>Branching strategy</h3>
+
+<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
+
+<dl>
+<dt>master branch</dt>
+<dd>this is the nice well-tested branch</dd>
+<dt>ui-spike branch</dt>
+<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
+</dl>
+
+<h3>Using Laurine for localisation</h3>
+
+<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
+
+<p>You define your <code>Localizble.strings</code> file as normal:</p>
+
+<figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="s">&quot;PLATFORM_NUMBER&quot;</span> <span class="o">=</span> <span class="s">&quot;Platform %@&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
+
+<figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="s">&quot;4&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Frameworks</h3>
+
+<p>Nope.</p>
+
+<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
+
 <h3>Data models</h3>
 
 <p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
@@ -91,7 +200,7 @@
 </ul>
 
 
-<script src="http://tthew.org/javascripts/mermaid.min.js"></script>
+<script src="http://daringsnowball.net/javascripts/mermaid.min.js"></script>
 
 
 <div class="mermaid">
@@ -120,15 +229,15 @@ end
 
 <p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
 
-<p>In the next post, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
 ]]></content>
   </entry>
   
   <entry>
     <title type="html"><![CDATA[Rewriting Nearly Departed (part 2: tech background)]]></title>
-    <link href="http://tthew.org/nearly-departed-rewrite-tech-background/"/>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/"/>
     <updated>2017-12-11T23:13:14+00:00</updated>
-    <id>http://tthew.org/rewriting-nearly-departed-tech-background</id>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-tech-background</id>
     <content type="html"><![CDATA[<p>This post will give a little of the technical background to <em>Nearly Departed</em> and explain some of the reasons for the rewrite.</p>
 
 <!-- more -->
@@ -137,9 +246,10 @@ end
 <blockquote><p>This is part 2 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
 <li>Part 2: tech background</li>
-<li><a href="http://tthew.org/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
 </ul>
 </blockquote>
 
@@ -238,15 +348,15 @@ end
 
 <h3>Next</h3>
 
-<p>In the <a href="http://tthew.org/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
 ]]></content>
   </entry>
   
   <entry>
     <title type="html"><![CDATA[Rewriting Nearly Departed (part 1: intro)]]></title>
-    <link href="http://tthew.org/nearly-departed-rewrite-intro/"/>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-intro/"/>
     <updated>2017-12-11T19:01:48+00:00</updated>
-    <id>http://tthew.org/rewriting-nearly-departed</id>
+    <id>http://daringsnowball.net/rewriting-nearly-departed</id>
     <content type="html"><![CDATA[<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
 
 <ol>
@@ -273,8 +383,9 @@ end
 
 <ul>
 <li>Part 1: intro</li>
-<li><a href="http://tthew.org/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
-<li><a href="http://tthew.org/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
 </ul>
 </blockquote>
 
@@ -284,9 +395,9 @@ end
 
 <p>Here are some slightly old screenshots to show what it looks like:</p>
 
-<p><img class="left" src="http://tthew.org/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
-<img class="left" src="http://tthew.org/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
-<img class="left" src="http://tthew.org/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
+<p><img class="left" src="http://daringsnowball.net/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://daringsnowball.net/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://daringsnowball.net/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
 
 <p>I wrote <em>Nearly Departed</em> in mid-2015, because I couldn&rsquo;t find a UK train departures app that I really liked. I was using <a href="https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8">&ldquo;UK Train Times&rdquo; by Agant</a>, which is a great app, but it wasn&rsquo;t quite right for me:</p>
 
@@ -343,15 +454,15 @@ end
 
 <h3> Next</h3>
 
-<p>In the <a href="http://tthew.org/nearly-departed-rewrite-tech-background/">next post</a>, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">next post</a>, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
 ]]></content>
   </entry>
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 5)]]></title>
-    <link href="http://tthew.org/ios-hacking-5/"/>
+    <link href="http://daringsnowball.net/ios-hacking-5/"/>
     <updated>2017-09-03T20:41:40+01:00</updated>
-    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-5</id>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-5</id>
     <content type="html"><![CDATA[<p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
 
 <!-- more -->
@@ -360,10 +471,10 @@ end
 <blockquote><p>This is part 5 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
-<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
-<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
-<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
 <li>Part 5: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
@@ -473,9 +584,9 @@ end
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
-    <link href="http://tthew.org/ios-hacking-4/"/>
+    <link href="http://daringsnowball.net/ios-hacking-4/"/>
     <updated>2017-09-03T11:58:24+01:00</updated>
-    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-4</id>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-4</id>
     <content type="html"><![CDATA[<p>OK team, it gets slightly more exciting now: lets tweak an iOS app at runtime, using Jay Freeman&rsquo;s <em>Cycript</em> tool.</p>
 
 <!-- more -->
@@ -484,11 +595,11 @@ end
 <blockquote><p>This is part 4 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
-<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
-<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
 <li>Part 4: altering apps at runtime with Cycript</li>
-<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -598,9 +709,9 @@ end
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 3)]]></title>
-    <link href="http://tthew.org/ios-hacking-3/"/>
+    <link href="http://daringsnowball.net/ios-hacking-3/"/>
     <updated>2017-09-03T10:56:18+01:00</updated>
-    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-3</id>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-3</id>
     <content type="html"><![CDATA[<p>Now we have a jailbroken phone with dev tools installed, it&rsquo;s time to start playing with apps. We&rsquo;ll start by debugging a running stock app using <code>lldb</code>.</p>
 
 <!-- more -->
@@ -609,11 +720,11 @@ end
 <blockquote><p>This is part 3 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
-<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
 <li>Part 3: debugging apps with lldb</li>
-<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
-<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -735,9 +846,9 @@ end
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
-    <link href="http://tthew.org/ios-hacking-2/"/>
+    <link href="http://daringsnowball.net/ios-hacking-2/"/>
     <updated>2017-09-02T12:12:00+01:00</updated>
-    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-2</id>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-2</id>
     <content type="html"><![CDATA[<p>In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.</p>
 
 <!-- more -->
@@ -746,17 +857,17 @@ end
 <blockquote><p>This is part 2 of a multi-part series:</p>
 
 <ul>
-<li><a href="http://tthew.org/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
 <li>Part 2: post-jailbreak stuff</li>
-<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
-<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
-<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
 <h3>Recap</h3>
 
-<p>In the <a href="http://tthew.org/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+<p>In the <a href="http://daringsnowball.net/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
 
 <p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
 
@@ -852,9 +963,9 @@ end
   
   <entry>
     <title type="html"><![CDATA[Introduction to hacking iOS apps (part 1)]]></title>
-    <link href="http://tthew.org/ios-hacking-1/"/>
+    <link href="http://daringsnowball.net/ios-hacking-1/"/>
     <updated>2017-09-02T09:30:56+01:00</updated>
-    <id>http://tthew.org/introduction-to-hacking-ios-apps-part-1</id>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-1</id>
     <content type="html"><![CDATA[<p>There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.</p>
 
 <ol>
@@ -874,10 +985,10 @@ end
 
 <ul>
 <li>Part 1: obtaining and jailbreaking a device</li>
-<li><a href="http://tthew.org/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
-<li><a href="http://tthew.org/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
-<li><a href="http://tthew.org/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
-<li><a href="http://tthew.org/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
 </ul>
 </blockquote>
 
@@ -963,7 +1074,7 @@ end
 </ul>
 
 
-<p>That&rsquo;s enough for this post. In <a href="http://tthew.org/ios-hacking-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
+<p>That&rsquo;s enough for this post. In <a href="http://daringsnowball.net/ios-hacking-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
 ]]></content>
   </entry>
   

@@ -3,7 +3,7 @@ layout: post
 title: "Rewriting Nearly Departed (part 3: rewrite plans)"
 date: 2017-12-12 01:26:14 +0000
 comments: true
-categories: [swift]
+categories: [swift, nearlydeparted]
 permalink: /nearly-departed-rewrite-plans/
 ---
 
@@ -16,6 +16,7 @@ So here's my plan for this rewrite of _Nearly Departed_.
 > * [Part 1][part1]: intro
 > * [Part 2][part2]: tech background
 > * Part 3: rewrite plans
+> * [Part 4][part4]: storage and sync
 
 ### Goals
 
@@ -34,6 +35,39 @@ So here's my plan for this rewrite of _Nearly Departed_.
 ### Non-goals
 
 * Making money - this is primarily a learning exercise
+
+
+### Branching strategy
+
+My git branching strategy is slightly unusual because I want to actually use the app daily while it's being developed, but I also want to maintain code quality and decent test coverage.
+
+master branch
+: this is the nice well-tested branch
+ui-spike branch
+: this is the hacky branch, where code is tweaked to make things work. `master` is regularly merged into `ui-spike`, but not the other way around
+
+
+### Using Laurine for localisation
+
+I've used [Laurine][laurine] in [another app][tldr-pages] with great success - and wanted to use it again here.
+
+You define your `Localizble.strings` file as normal:
+
+{% codeblock lang:swift Localizable.strings %}
+"PLATFORM_NUMBER" = "Platform %@";{% endcodeblock %}
+
+and then Laurine generates a new `Localizations` swift file, which you can use like this:
+
+{% codeblock lang:swift Localizations.swift %}
+Localizations.PLATFORM_NUMBER("4"){% endcodeblock %}
+
+
+### Frameworks
+
+Nope.
+
+It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.
+
 
 
 ### Data models
@@ -83,12 +117,15 @@ This collection of stacks is stored in shared `UserDefaults`, so you could push 
 **Which brings us to _results_.** Each type of route has a corresponding `ResultSet` containing a collection of `Result` objects. Those `Result` objects can represent either a _service departing from a station_, or a _calling point for a single service_. And - to enable the user to drill-down - each `Result` can have provide a child `Route`, which defines the next query.
 
 
-In the next post, I'll describe how route definitions are stored, and how they're synchronised between iPhone and Watch.
+In the [next post][part4], I'll describe how route definitions are stored, and how they're synchronised between iPhone and Watch.
 
 
+[kevinrutherford]: https://twitter.com/kevinrutherford
+[laurine]: https://github.com/JiriTrecak/Laurine/
+[tldr-pages]: https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&mt=8
 
 [part1]: /nearly-departed-rewrite-intro/
 [part2]: /nearly-departed-rewrite-tech-background/
 [part3]: /nearly-departed-rewrite-plans/
+[part4]: /nearly-departed-rewrite-storage-and-sync/
 
-[kevinrutherford]: https://twitter.com/kevinrutherford

@@ -3,7 +3,7 @@ layout: post
 title: "Rewriting Nearly Departed (part 2: tech background)"
 date: 2017-12-11 23:13:14 +0000
 comments: true
-categories: [swift]
+categories: [swift, nearlydeparted]
 permalink: /nearly-departed-rewrite-tech-background/
 ---
 
@@ -16,6 +16,7 @@ This post will give a little of the technical background to _Nearly Departed_ an
 > * [Part 1][part1]: intro
 > * Part 2: tech background
 > * [Part 3][part3]: rewrite plans
+> * [Part 4][part4]: storage and sync
 
 ### Headline tech features
 
@@ -99,4 +100,5 @@ In the [next post][part3], I'll discuss my high-level plans for the rewrite.
 [part1]: /nearly-departed-rewrite-intro/
 [part2]: /nearly-departed-rewrite-tech-background/
 [part3]: /nearly-departed-rewrite-plans/
+[part4]: /nearly-departed-rewrite-storage-and-sync/
 

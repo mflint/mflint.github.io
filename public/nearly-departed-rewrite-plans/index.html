@@ -50,6 +50,7 @@ Part 3: &hellip;"> <meta name="keywords" content="">
 <li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
 <li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
 <li>Part 3: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
 </ul>
 </blockquote>
 
@@ -84,6 +85,43 @@ Part 3: &hellip;"> <meta name="keywords" content="">
 <li>Making money - this is primarily a learning exercise</li>
 </ul>
 
+
+<h3>Branching strategy</h3>
+
+<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
+
+<dl>
+<dt>master branch</dt>
+<dd>this is the nice well-tested branch</dd>
+<dt>ui-spike branch</dt>
+<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
+</dl>
+
+<h3>Using Laurine for localisation</h3>
+
+<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
+
+<p>You define your <code>Localizble.strings</code> file as normal:</p>
+
+<figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="s">&quot;PLATFORM_NUMBER&quot;</span> <span class="o">=</span> <span class="s">&quot;Platform %@&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
+
+<figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="s">&quot;4&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Frameworks</h3>
+
+<p>Nope.</p>
+
+<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
 
 <h3>Data models</h3>
 
@@ -141,7 +179,7 @@ end
 
 <p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
 
-<p>In the next post, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+<p>In the <a href="/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
 </div>
 
 
@@ -164,7 +202,7 @@ end
 
 <div class="tags">
 
-	<a class='category' href='/blog/categories/swift/'>swift</a>
+	<a class='category' href='/blog/categories/nearlydeparted/'>nearlydeparted</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
 
 </div>
 
