@@ -14,9 +14,9 @@ This post gives an overview about how _Nearly Departed_ Routes are stored and sy
 > This is part 4 of a multi-part series:
 >
 > * [Part 1][part1]: intro
-> * Part 2: tech background
+> * [Part 2][part2]: tech background
 > * [Part 3][part3]: rewrite plans
-> * [Part 4][part4]: storage and sync
+> * Part 4: storage and sync
 
 ### Route storage
 
