@@ -1,0 +1,187 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Introduction to hacking iOS apps (part 2)  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Introduction to Hacking iOS Apps (Part 2)</h2>
+	<div class="entry-content"><p>In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li>Part 2: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Recap</h3>
+
+<p>In the <a href="/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+
+<p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
+
+<h3>Cydia updates</h3>
+
+<p>When you start Cydia for the first time, you&rsquo;ll probably be prompted to perform an <em>Essential Upgrade</em>. I&rsquo;d go for the &ldquo;Complete Upgrade&rdquo;; Cydia will kill itself when this is complete.</p>
+
+<p>Next, we&rsquo;ll access the device over <em>ssh</em>.</p>
+
+<h3>ssh access over WiFi</h3>
+
+<p>The yalu jailbreak already includes the <a href="https://matt.ucc.asn.au/dropbear/dropbear.html">Dropbear</a> ssh server, so no need to install <em>OpenSSH</em>. By default, the server is only enabled over USB - so we&rsquo;ll need to change the config to allow this over WiFi.</p>
+
+<ul>
+<li>use Cydia to install &ldquo;Filza File Manager&rdquo; app</li>
+<li>open Filza, and find &ldquo;/private/var/containers/Bundle/Application/yalu102/yalu102.app/dropbear.plist&rdquo;</li>
+<li>use the (i) button to change &ldquo;OPen with&rdquo; to &ldquo;Text Editor&rdquo;, then tap &ldquo;dropbear.plist&rdquo; to edit it</li>
+<li>find <code>127.0.0.1:22</code> and replace it with <code>22</code> (this binds the dropbear ssh daemon to all network interfaces, instead of the default which just uses loopback)</li>
+<li>reboot the device (and re-jailbreak if necessary)</li>
+<li>you should be able to ssh to the device
+
+<ul>
+<li><code>ssh root@{ip-address}</code></li>
+<li>password <code>alpine</code></li>
+</ul>
+</li>
+<li>now&rsquo;s a great time to change the root password
+
+<ul>
+<li><code>passwd</code></li>
+</ul>
+</li>
+<li>and also change the password for the user &ldquo;mobile&rdquo;, which is used for running most apps
+
+<ul>
+<li><code>passwd mobile</code></li>
+</ul>
+</li>
+</ul>
+
+
+<h3>debugserver</h3>
+
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. You&rsquo;ll need Xcode intalled on your Mac to do this.</p>
+
+<p>First, take a look inside <code>/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/</code> - you&rsquo;ll see folders for different versions of iOS. Inside each folder is a <code>dmg</code> file (disk archive). Open the correct one for your version of iOS:</p>
+
+<p><code>hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg</code></p>
+
+<p>Then copy the <code>debugserver</code> binary somewhere:</p>
+
+<p><code>cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./</code></p>
+
+<p>Create a file called <code>entitlements.plist</code>:</p>
+
+<p><code>cat &gt; entitlements.plist</code></p>
+
+<p>&hellip; and paste in this content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+</span><span class='line'>&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd"&gt;
+</span><span class='line'>&lt;plist version="1.0"&gt;
+</span><span class='line'>&lt;dict&gt;
+</span><span class='line'>    &lt;key&gt;com.apple.springboard.debugapplications&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;run-unsigned-code&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;get-task-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;task_for_pid-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>&lt;/dict&gt; 
+</span><span class='line'>&lt;/plist&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then close the file by pressing ^D (Control-D). Now re-sign <code>debugserver</code> with this new entitlements file:</p>
+
+<p><code>codesign -s - --entitlements entitlements.plist -f debugserver</code></p>
+
+<p>Finally, copy this re-signed <code>debugserver</code> binary to the device:</p>
+
+<p><code>tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2017-09-02T12:12:00+01:00" pubdate data-updated="true">Sep 2nd, 2017</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/hacking/'>hacking</a>, <a class='category' href='/blog/categories/jailbreaking/'>jailbreaking</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

@@ -1,0 +1,194 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Introduction to hacking iOS apps (part 5)  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="Last time, we played with Cycript. Now let&rsquo;s briefly explore Frida, which is a framework for instrumenting running apps and performing code- &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Introduction to Hacking iOS Apps (Part 5)</h2>
+	<div class="entry-content"><p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 5 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li>Part 5: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Frida?</h3>
+
+<p><a href="https://www.frida.re">Frida</a> is a dynamic code instrumentation and injection toolkit. We can use it to monitor what&rsquo;s going on while an app is running, intercept function calls and perform arbitrary operations.</p>
+
+<h3>Frida installation</h3>
+
+<p>There&rsquo;s a <a href="https://www.frida.re/docs/ios/">complete set of installation instructions on the Frida website</a>, but here&rsquo;s the tl;dr:</p>
+
+<ul>
+<li>open <em>Cydia</em> on the jailbroken device</li>
+<li>select the <em>Sources</em> tab</li>
+<li>Edit, then Add a new source: <code>https://build.frida.re</code></li>
+<li>Now you should be able to search for <code>Frida</code> and install it</li>
+</ul>
+
+
+<p>Finally, on your Mac, install the Frida client:</p>
+
+<p><code>pip install --user frida</code></p>
+
+<h3>Testing the installation</h3>
+
+<p>Connect the device to your Mac over USB, then as Frida for a list of running applications on the device:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Mac:~ matthew$ frida-ps -Ua
+</span><span class='line'>PID  Name   Identifier          
+</span><span class='line'>---  -----  --------------------
+</span><span class='line'>519  Cydia  com.saurik.Cydia    
+</span><span class='line'>379  Mail   com.apple.mobilemail</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Instrumenting function calls in a 3rd-party app</h3>
+
+<p>I&rsquo;ve installed the <a href="https://itunes.apple.com/gb/app/amazon/id335187483?mt=8">Amazon UK app</a> on the device, and we&rsquo;ll see what we can discover about how logins are performed. For this, we&rsquo;ll use <a href="https://www.frida.re/docs/frida-trace/">frida-trace</a>.</p>
+
+<ul>
+<li>start the Amazon app on the device</li>
+<li>it looks like the &ldquo;Sign In&rdquo; feature happens in a modal ViewController - so we&rsquo;ll try looking for <code>viewWillAppear:</code> calls:
+
+<ul>
+<li><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* viewWillAppear*]"</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>&hellip; which gives this output when we tap the <em>Sign In</em> button:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> 13506 ms  -[AWModalNavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13506 ms     | -[UINavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13507 ms     |    | -[UIViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms  -[AIWebViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms     | -[UIViewController viewWillAppear:0x1 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hmm, <code>AIWebViewController</code>. Are they using an embedded <code>UIWebView</code>? Let&rsquo;s check:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView *]"</code></p>
+
+<p>Whoa, loads of output there too. But a <code>UIWebView</code> which performs a login is useless without a delegate to pass information back to. We should find it.</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView setDelegate:]"</code></p>
+
+<p>&hellip; which shows this when we tap <em>Sign In</em>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Instrumenting functions...                                              
+</span><span class='line'>-[UIWebView setDelegate:]: Loaded handler at "/Users/matthew/Dev/Temp/__handlers__/__UIWebView_setDelegate__.js"
+</span><span class='line'>Started tracing 1 function. Press Ctrl+C to stop.                       
+</span><span class='line'>           /* TID 0x503 */
+</span><span class='line'>  5608 ms  -[UIWebView setDelegate:0x1026737c0 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So we have a delegate being set, but no idea what kind of object that is. It probably doesn&rsquo;t matter, because we can easily hook into <a href="https://developer.apple.com/documentation/uikit/uiwebviewdelegate">the callback functions in the <code>UIWebViewDelegate</code> protocol</a>. We&rsquo;ll try hooking into <code>webView:shouldStartLoadWith:navigationType:</code>:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* *shouldStartLoadWith*]"</code></p>
+
+<p>And sure enough, this is logged every time the <em>Sign In</em> webpage loads content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  7081 ms  -[AIWebViewController webView:0x102508130 shouldStartLoadWithRequest:0x170206510 navigationType:0x5 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The second parameter to that call is an <code>NSURLRequest</code>. I&rsquo;d love to see what&rsquo;s in there - and we can do just that, by editing Frida&rsquo;s JavaScript hooks. Frida kindly generates some template hooks for us. The one we want is <code>__handlers__/__AIWebViewController_webView_sh_-4df00585.js</code>. (Yours may be named slightly differently)</p>
+
+<p>If we edit this file, we can see how that previous piece of logging was performed: there are two hooks, for when the function starts (<code>onEnter</code>) and finishes (<code>onLeave</code>).</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2017-09-03T20:41:40+01:00" pubdate data-updated="true">Sep 3rd, 2017</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/hacking/'>hacking</a>, <a class='category' href='/blog/categories/jailbreaking/'>jailbreaking</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

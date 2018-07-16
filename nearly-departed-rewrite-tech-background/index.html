@@ -1,0 +1,189 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Rewriting Nearly Departed (part 2: tech background)  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="This post will give a little of the technical background to Nearly Departed and explain some of the reasons for the rewrite. This is part 2 of a &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Rewriting Nearly Departed (Part 2: Tech Background)</h2>
+	<div class="entry-content"><p>This post will give a little of the technical background to <em>Nearly Departed</em> and explain some of the reasons for the rewrite.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li>Part 2: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Headline tech features</h3>
+
+<ul>
+<li>Written in Objective C</li>
+<li>Kind-of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel">MVVM</a></li>
+<li>Very little unit-test coverage</li>
+<li>Made with a set of discrete service classes, injected using <a href="http://objection-framework.org">Objection</a></li>
+</ul>
+
+
+<h3>Why no WatchOS support any more?</h3>
+
+<p>The first WatchOS support was a WatchOS 1 <em>glance</em>. Communication between Watch and iPhone used shared <code>NSUserDefaults</code> and <a href="https://developer.apple.com/library/content/documentation/Darwin/Conceptual/MacOSXNotifcationOv/DarwinNotificationConcepts/DarwinNotificationConcepts.html">Darwin Notifications</a> were used by the two processes to notify each other that something had changed. (Remember that for WatchOS1 the Watch app process ran <em>on the iPhone</em>, effectively using the Watch as a separate screen. So Darwin Notifications could be used for interprocess comms because both processes were running on the same device)</p>
+
+<p>WatchOS 2 introduced <em>native</em> third-party apps, moving the Watch app process onto the Watch itself, so the Darwin Notification code was broken.</p>
+
+<h3>OpenLDBWS API</h3>
+
+<p><em>Nearly Departed</em> uses the <a href="https://lite.realtime.nationalrail.co.uk/openldbws/">OpenLDBWS</a> (&ldquo;Live Departure Boards Web Service&rdquo;) SOAP API from <a href="http://www.nationalrail.co.uk">National Rail</a>. Some definitions:</p>
+
+<dl>
+<dt>Darwin</dt>
+<dd>National Rail&rsquo;s system for tracking the movements of passenger services</dd>
+<dt>OpenLDBWS</dt>
+<dd>A SOAP API for accessing real-time information from Darwin</dd>
+</dl>
+
+<p>The API gives a <em>tonne</em> of great real-time data, including:</p>
+
+<ul>
+<li>Departure/arrival boards (which return the same data you would see on displays at any of our 2500 stations</li>
+<li>Progress information for all services which call at these stations. This includes:
+
+<ul>
+<li>Scheduled arrival/departure time at each calling point</li>
+<li>Actual or estimated arrival/departure time at each calling point</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Hats off to them, the <em>OpenLDBWS</em> team have done a great job. I have a couple of minor complaints (such as times being sent like <code>08:18</code> without timezone or date information) - but they&rsquo;ve managed to nicely model a proper complex set of data. Shame it&rsquo;s SOAP/XML though!</p>
+
+<h3>Station data</h3>
+
+<p>While the OpenLDBWS return some station data in the responses, I still need to maintain my own set of station data which is bundled with the app. My requirements are:</p>
+
+<ul>
+<li>For each station, I need the following:
+
+<ul>
+<li>Station name (such as &ldquo;Stevenage&rdquo;)</li>
+<li>The Computer Reservation System (CRS) code, which uniquely identifies this station in the API (example: &ldquo;SVG&rdquo;)</li>
+<li>location (latitude/longitude)</li>
+</ul>
+</li>
+<li>The app needs this data in <em>list</em> format (so it can search for stations by name or CRS code)</li>
+<li>But also in a format which can be searched by nearest station to a given location</li>
+</ul>
+
+
+<p>The data itself comes from two sources:</p>
+
+<dl>
+<dt><code>station_codes.csv</code></dt>
+<dd><a href="http://www.nationalrail.co.uk/stations_destinations/48541.aspx">from National Rail</a></dd>
+<dt><code>RailReferences.csv</code></dt>
+<dd><a href="https://data.gov.uk/dataset/naptan">from the UK Government NaPTAN dataset</a></dd>
+</dl>
+
+<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> also has location data in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
+
+<ul>
+<li>matches data from the <code>station_codes.csv</code> and <code>RailReferences.csv</code> files</li>
+<li>corrects inconsistencies between the two files (NaPTAN often has incorrect CSR codes)</li>
+<li>adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn&rsquo;t yet been updated)</li>
+<li>filters out some non-mainline stations (such as heritage rail or ferry terminals)</li>
+<li>converts easting/northing locations to latitude/longitude</li>
+<li>creates a two-dimensional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
+</ul>
+
+
+<p>The app reads this plist into memory in its tree structure for location searches, and flattens it to an array for name/CRS searches.</p>
+
+<h3>Architectural limitations</h3>
+
+<ul>
+<li>I frequently get asked to provide support for showing <em>ServiceDetails</em> data from OpenLWBWS - ie, data for a particular service - but the app was only designed to show <em>DepartureBoard</em> data</li>
+<li>The app wasn&rsquo;t written to use other data sources - so if I ever wanted to add London Underground data, it would be very difficult to do so</li>
+<li>It&rsquo;s just not very well written! ;-)</li>
+</ul>
+
+
+<h3>Next</h3>
+
+<p>In the <a href="/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2017-12-11T23:13:14+00:00" pubdate data-updated="true">Dec 11th, 2017</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/nearlydeparted/'>nearlydeparted</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

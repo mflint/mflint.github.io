@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: hacking | Matthew's Dev Blog]]></title>
+  <link href="http://daringsnowball.net/blog/categories/hacking/atom.xml" rel="self"/>
+  <link href="http://daringsnowball.net/"/>
+  <updated>2018-07-16T06:40:38+01:00</updated>
+  <id>http://daringsnowball.net/</id>
+  <author>
+    <name><![CDATA[Matthew Flint]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 5)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-5/"/>
+    <updated>2017-09-03T20:41:40+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-5</id>
+    <content type="html"><![CDATA[<p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 5 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li>Part 5: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Frida?</h3>
+
+<p><a href="https://www.frida.re">Frida</a> is a dynamic code instrumentation and injection toolkit. We can use it to monitor what&rsquo;s going on while an app is running, intercept function calls and perform arbitrary operations.</p>
+
+<h3>Frida installation</h3>
+
+<p>There&rsquo;s a <a href="https://www.frida.re/docs/ios/">complete set of installation instructions on the Frida website</a>, but here&rsquo;s the tl;dr:</p>
+
+<ul>
+<li>open <em>Cydia</em> on the jailbroken device</li>
+<li>select the <em>Sources</em> tab</li>
+<li>Edit, then Add a new source: <code>https://build.frida.re</code></li>
+<li>Now you should be able to search for <code>Frida</code> and install it</li>
+</ul>
+
+
+<p>Finally, on your Mac, install the Frida client:</p>
+
+<p><code>pip install --user frida</code></p>
+
+<h3>Testing the installation</h3>
+
+<p>Connect the device to your Mac over USB, then as Frida for a list of running applications on the device:</p>
+
+<pre><code>Mac:~ matthew$ frida-ps -Ua
+PID  Name   Identifier          
+---  -----  --------------------
+519  Cydia  com.saurik.Cydia    
+379  Mail   com.apple.mobilemail
+</code></pre>
+
+<h3>Instrumenting function calls in a 3rd-party app</h3>
+
+<p>I&rsquo;ve installed the <a href="https://itunes.apple.com/gb/app/amazon/id335187483?mt=8">Amazon UK app</a> on the device, and we&rsquo;ll see what we can discover about how logins are performed. For this, we&rsquo;ll use <a href="https://www.frida.re/docs/frida-trace/">frida-trace</a>.</p>
+
+<ul>
+<li>start the Amazon app on the device</li>
+<li>it looks like the &ldquo;Sign In&rdquo; feature happens in a modal ViewController - so we&rsquo;ll try looking for <code>viewWillAppear:</code> calls:
+
+<ul>
+<li><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* viewWillAppear*]"</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>&hellip; which gives this output when we tap the <em>Sign In</em> button:</p>
+
+<pre><code> 13506 ms  -[AWModalNavigationController viewWillAppear:0x1 ]
+ 13506 ms     | -[UINavigationController viewWillAppear:0x1 ]
+ 13507 ms     |    | -[UIViewController viewWillAppear:0x1 ]
+ 13517 ms  -[AIWebViewController viewWillAppear:0x1 ]
+ 13517 ms     | -[UIViewController viewWillAppear:0x1 ]
+</code></pre>
+
+<p>Hmm, <code>AIWebViewController</code>. Are they using an embedded <code>UIWebView</code>? Let&rsquo;s check:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView *]"</code></p>
+
+<p>Whoa, loads of output there too. But a <code>UIWebView</code> which performs a login is useless without a delegate to pass information back to. We should find it.</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView setDelegate:]"</code></p>
+
+<p>&hellip; which shows this when we tap <em>Sign In</em>:</p>
+
+<pre><code>Instrumenting functions...                                              
+-[UIWebView setDelegate:]: Loaded handler at "/Users/matthew/Dev/Temp/__handlers__/__UIWebView_setDelegate__.js"
+Started tracing 1 function. Press Ctrl+C to stop.                       
+           /* TID 0x503 */
+  5608 ms  -[UIWebView setDelegate:0x1026737c0 ]
+</code></pre>
+
+<p>So we have a delegate being set, but no idea what kind of object that is. It probably doesn&rsquo;t matter, because we can easily hook into <a href="https://developer.apple.com/documentation/uikit/uiwebviewdelegate">the callback functions in the <code>UIWebViewDelegate</code> protocol</a>. We&rsquo;ll try hooking into <code>webView:shouldStartLoadWith:navigationType:</code>:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* *shouldStartLoadWith*]"</code></p>
+
+<p>And sure enough, this is logged every time the <em>Sign In</em> webpage loads content:</p>
+
+<pre><code>  7081 ms  -[AIWebViewController webView:0x102508130 shouldStartLoadWithRequest:0x170206510 navigationType:0x5 ]
+</code></pre>
+
+<p>The second parameter to that call is an <code>NSURLRequest</code>. I&rsquo;d love to see what&rsquo;s in there - and we can do just that, by editing Frida&rsquo;s JavaScript hooks. Frida kindly generates some template hooks for us. The one we want is <code>__handlers__/__AIWebViewController_webView_sh_-4df00585.js</code>. (Yours may be named slightly differently)</p>
+
+<p>If we edit this file, we can see how that previous piece of logging was performed: there are two hooks, for when the function starts (<code>onEnter</code>) and finishes (<code>onLeave</code>).</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-4/"/>
+    <updated>2017-09-03T11:58:24+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-4</id>
+    <content type="html"><![CDATA[<p>OK team, it gets slightly more exciting now: lets tweak an iOS app at runtime, using Jay Freeman&rsquo;s <em>Cycript</em> tool.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li>Part 4: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Cycript?</h3>
+
+<p>Cycript is a tool based around a JavaScript interpreter, which can inject itself into another running process. It provides a rich set of features to bridge between C, C++, Objective C (and Java, if that&rsquo;s your thing) into JavaScript. You can use it for inspecting and manipulating running processes.</p>
+
+<h3>Download Cycript and copy to the device</h3>
+
+<p>Let&rsquo;s start by going to the <a href="http://www.cycript.org">Cycript homepage</a> and downloading the SDK. I assume it&rsquo;s unzipped into your Downloads folder. Then we can copy it over to the device:</p>
+
+<p><code>tar -czf - ~/Downloads/cycript_0 | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>(This will take a minute to complete - be patient)</p>
+
+<p>The <a href="http://www.cycript.org/manual/">Cycript manual</a> is a great detailed read - I recommend spending 30 minutes to read the whole thing. For now, let&rsquo;s hook it up to the Calculator app and see what it can do.</p>
+
+<h3>Cycript the Calculator app</h3>
+
+<p>Launch the Calculator app on the device, and ssh into it. <em>Cycript</em> can attach to processes by <em>pid</em> or by name. I&rsquo;m weird and like to use the <em>pid</em>, but here&rsquo;s how you&rsquo;d do it both ways:</p>
+
+<p><code>./cycript_0/cycript -p 520</code></p>
+
+<p><code>./cycript_0/cycript -p Calculator</code></p>
+
+<p>When you&rsquo;ve finished with <em>Cycript</em>, you can exit by typing <code>?exit</code> or send the <code>EOF</code> character (^D).</p>
+
+<p>We&rsquo;ll start with a simple query to see what&rsquo;s on the screen. Let&rsquo;s use the <code>choose</code> command to find the some ViewController classes:</p>
+
+<pre><code>cy# choose(UIViewController)
+[#"&lt;Calculator.CalculatorController: 0x100205170&gt;",
+#"&lt;Calculator.DisplayViewController: 0x1002054c0&gt;",
+#"&lt;Calculator.KeypadViewController: 0x100205a10&gt;"]
+</code></pre>
+
+<p>Interesting! Looks like there&rsquo;s a main <code>CalculatorController</code> and two child ViewControllers for the the display and the keyboard. Sweet.</p>
+
+<p>So what about labels?</p>
+
+<pre><code>cy# choose(UILabel)
+[#"&lt;Calculator.CalculatorKeypadLabel: 0x10030c540; baseClass = UILabel; frame = (160 1.5; 79 79); text = '%'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408c7b0&gt;&gt;",
+#"&lt;UILabel: 0x10030da30; frame = (257.5 68.5; 47.5 99.5); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408bc70&gt;&gt;",
+#"&lt;UILabel: 0x100206eb0; frame = (18 142.5; 0 0); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008c120&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d080; baseClass = UILabel; frame = (1.5 1.5; 78.5 79); text = 'C'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cad0&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d830; baseClass = UILabel; frame = (80.5 1.5; 79 79); text = '\xef\xbf\xbc'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce40&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x10020ff90; baseClass = UILabel; frame = (1.5 81; 78.5 79); text = '7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce90&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x1002105c0; baseClass = UILabel; frame = (239.5 1.5; 79 79); text = '\xc3\xb7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cee0&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x1002108c0; baseClass = UILabel; frame = (80.5 81; 79 79); text = '8'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d1b0&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100210b50; baseClass = UILabel; frame = (160 81; 79 79); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cfd0&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100210de0; baseClass = UILabel; frame = (239.5 81; 79 79); text = '\xc3\x97'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d390&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100211070; baseClass = UILabel; frame = (1.5 160.5; 78.5 79); text = '4'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d480&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100211610; baseClass = UILabel; frame = (80.5 160.5; 79 79); text = '5'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d570&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x1002118a0; baseClass = UILabel; frame = (160 160.5; 79 79); text = '6'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d660&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100211b30; baseClass = UILabel; frame = (239.5 160.5; 79 79); text = '\xe2\x88\x92'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d750&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100211dc0; baseClass = UILabel; frame = (1.5 240; 78.5 79); text = '1'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d840&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100212050; baseClass = UILabel; frame = (80.5 240; 79 79); text = '2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d930&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x1002122e0; baseClass = UILabel; frame = (160 240; 79 79); text = '3'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008da20&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100212570; baseClass = UILabel; frame = (239.5 240; 79 79); text = '+'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008db10&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100212800; baseClass = UILabel; frame = (1.5 319.5; 78.5 79); text = '0'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dc00&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100212a90; baseClass = UILabel; frame = (80.5 319.5; 79 79); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dcf0&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100212d20; baseClass = UILabel; frame = (160 319.5; 79 79); text = '\xe2\x80\xa2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dd90&gt;&gt;",
+#"&lt;Calculator.CalculatorKeypadLabel: 0x100213c00; baseClass = UILabel; frame = (239.5 319.5; 79 79); text = '='; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008e010&gt;&gt;"]
+</code></pre>
+
+<p>Yup, there&rsquo;s a shedload of labels, as you&rsquo;d expect. Can we change one?</p>
+
+<p>Find the &ldquo;5&rdquo; label and get it&rsquo;s memory address. Mine is at <code>0x100211610</code>. We can assign a variable to this memory address, and easily change its label to <em>emoji poop</em>:</p>
+
+<pre><code>var label5=new Instance(0x100211610)
+label5.text=@"\ud83d\udca9"
+</code></pre>
+
+<p><em>Cycript</em> is a great tool, and can do much more than this trivial change.</p>
+
+<p>Next time: we&rsquo;ll have play with <a href="https://www.frida.re">Frida</a>, an instrumentation and code-injection toolkit.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 3)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-3/"/>
+    <updated>2017-09-03T10:56:18+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-3</id>
+    <content type="html"><![CDATA[<p>Now we have a jailbroken phone with dev tools installed, it&rsquo;s time to start playing with apps. We&rsquo;ll start by debugging a running stock app using <code>lldb</code>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li>Part 3: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Debugging apps with <code>lldb</code></h3>
+
+<p>Start the Calculator app on the device, then<code>ssh</code> into the device (as <code>root</code>). Find the process ID (&ldquo;pid&rdquo;) of the running Calculator app.</p>
+
+<pre><code>JB-phone:~ root# ps ax | grep -i calculator
+717   ??  Ss     0:00.31 /Applications/Calculator.app/Calculator
+719 s000  R+     0:00.01 grep -i calculator
+</code></pre>
+
+<p>So the <em>pid</em> is 717. Yours will probably be different.</p>
+
+<p>Start <code>debugserver</code> on the device, and attach it to the Calculator process by using its <em>pid</em>. I&rsquo;ve used port 1234, but it could be anything greater than 1024:</p>
+
+<pre><code>JB-phone:~ root# ./debugserver *:1234 --attach=717
+debugserver-@(#)PROGRAM:debugserver  PROJECT:debugserver-360.0.26.1
+ for arm64.
+Attaching to process 717...
+Listening to port 1234 for a connection from *...
+</code></pre>
+
+<p>The debugger is attached to the Calculator process, now let&rsquo;s attach <code>lldb</code> to it <em>from your Mac</em>:</p>
+
+<ul>
+<li>start <code>lldb</code> on your Mac</li>
+<li><code>platform select remote-ios</code></li>
+<li><code>process connect connect://192.168.1.20:1234</code>
+
+<ul>
+<li>where this is the IP address of the device, and the <code>debugserver</code> port</li>
+</ul>
+</li>
+</ul>
+
+
+<p>The output looks like this:</p>
+
+<pre><code>Mac:~ matthew$ lldb
+(lldb) platform select remote-ios
+  Platform: remote-ios
+ Connected: no
+  SDK Path: "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+ SDK Roots: [ 0] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.1.1 (14B100)"
+ SDK Roots: [ 1] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2 (14C92)"
+ SDK Roots: [ 2] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2.1 (14D27)"
+ SDK Roots: [ 3] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.3.2 (14F89)"
+ SDK Roots: [ 4] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+ SDK Roots: [ 5] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5327g)"
+ SDK Roots: [ 6] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5341f)"
+ SDK Roots: [ 7] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5362a)"
+ SDK Roots: [ 8] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5368a)"
+(lldb) process connect connect://192.168.1.20:1234
+Process 717 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x0000000185a4816c libsystem_kernel.dylib`mach_msg_trap + 8
+libsystem_kernel.dylib`mach_msg_trap:
+-&gt;  0x185a4816c &lt;+8&gt;: ret    
+
+libsystem_kernel.dylib`mach_msg_overwrite_trap:
+    0x185a48170 &lt;+0&gt;: mov    x16, #-0x20
+    0x185a48174 &lt;+4&gt;: svc    #0x80
+    0x185a48178 &lt;+8&gt;: ret    
+(lldb)  
+</code></pre>
+
+<p>Notice that <code>lldb</code> says the process has been stopped. It really means &ldquo;suspended&rdquo;, as if it were at a breakpoint. Tap buttons on the Calculator app - they won&rsquo;t work, proving that the app is paused.</p>
+
+<p>We can unpause the app by issuing the <code>continue</code> command to <code>lldb</code>:</p>
+
+<pre><code>(lldb) continue
+Process 717 resuming
+(lldb) 
+</code></pre>
+
+<p>&hellip; and you&rsquo;ll see the app has resumed, and buttons work once more.</p>
+
+<p>If you want to continue using <code>lldb</code>, then do so - there&rsquo;s a ton of information on <a href="http://lldb.llvm.org">the lldb homepage</a>. In the next instalment, we&rsquo;ll switch tools and use Jay Freeman&rsquo;s <code>Cycript</code> to play with this app some more.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-2/"/>
+    <updated>2017-09-02T12:12:00+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-2</id>
+    <content type="html"><![CDATA[<p>In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li>Part 2: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Recap</h3>
+
+<p>In the <a href="/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+
+<p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
+
+<h3>Cydia updates</h3>
+
+<p>When you start Cydia for the first time, you&rsquo;ll probably be prompted to perform an <em>Essential Upgrade</em>. I&rsquo;d go for the &ldquo;Complete Upgrade&rdquo;; Cydia will kill itself when this is complete.</p>
+
+<p>Next, we&rsquo;ll access the device over <em>ssh</em>.</p>
+
+<h3>ssh access over WiFi</h3>
+
+<p>The yalu jailbreak already includes the <a href="https://matt.ucc.asn.au/dropbear/dropbear.html">Dropbear</a> ssh server, so no need to install <em>OpenSSH</em>. By default, the server is only enabled over USB - so we&rsquo;ll need to change the config to allow this over WiFi.</p>
+
+<ul>
+<li>use Cydia to install &ldquo;Filza File Manager&rdquo; app</li>
+<li>open Filza, and find &ldquo;/private/var/containers/Bundle/Application/yalu102/yalu102.app/dropbear.plist&rdquo;</li>
+<li>use the (i) button to change &ldquo;OPen with&rdquo; to &ldquo;Text Editor&rdquo;, then tap &ldquo;dropbear.plist&rdquo; to edit it</li>
+<li>find <code>127.0.0.1:22</code> and replace it with <code>22</code> (this binds the dropbear ssh daemon to all network interfaces, instead of the default which just uses loopback)</li>
+<li>reboot the device (and re-jailbreak if necessary)</li>
+<li>you should be able to ssh to the device
+
+<ul>
+<li><code>ssh root@{ip-address}</code></li>
+<li>password <code>alpine</code></li>
+</ul>
+</li>
+<li>now&rsquo;s a great time to change the root password
+
+<ul>
+<li><code>passwd</code></li>
+</ul>
+</li>
+<li>and also change the password for the user &ldquo;mobile&rdquo;, which is used for running most apps
+
+<ul>
+<li><code>passwd mobile</code></li>
+</ul>
+</li>
+</ul>
+
+
+<h3>debugserver</h3>
+
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. You&rsquo;ll need Xcode intalled on your Mac to do this.</p>
+
+<p>First, take a look inside <code>/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/</code> - you&rsquo;ll see folders for different versions of iOS. Inside each folder is a <code>dmg</code> file (disk archive). Open the correct one for your version of iOS:</p>
+
+<p><code>hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg</code></p>
+
+<p>Then copy the <code>debugserver</code> binary somewhere:</p>
+
+<p><code>cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./</code></p>
+
+<p>Create a file called <code>entitlements.plist</code>:</p>
+
+<p><code>cat &gt; entitlements.plist</code></p>
+
+<p>&hellip; and paste in this content:</p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;com.apple.springboard.debugapplications&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;run-unsigned-code&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;get-task-allow&lt;/key&gt; &lt;true/&gt;
+    &lt;key&gt;task_for_pid-allow&lt;/key&gt; &lt;true/&gt;
+&lt;/dict&gt; 
+&lt;/plist&gt;
+</code></pre>
+
+<p>Then close the file by pressing ^D (Control-D). Now re-sign <code>debugserver</code> with this new entitlements file:</p>
+
+<p><code>codesign -s - --entitlements entitlements.plist -f debugserver</code></p>
+
+<p>Finally, copy this re-signed <code>debugserver</code> binary to the device:</p>
+
+<p><code>tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 1)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-1/"/>
+    <updated>2017-09-02T09:30:56+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-1</id>
+    <content type="html"><![CDATA[<p>There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.</p>
+
+<ol>
+<li>Acquiring and jailbreaking an iOS device</li>
+<li>Installing necessary tools</li>
+<li>Analysing third-party apps</li>
+<li>Changing functionality</li>
+</ol>
+
+
+<p>In this first post, we&rsquo;ll acquire and jailbreak an iOS device.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li>Part 1: obtaining and jailbreaking a device</li>
+<li><a href="/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Acquiring a suitable iOS device</h3>
+
+<p>First, some warnings:</p>
+
+<ul>
+<li>Don&rsquo;t do this on your primary iOS device - get a separate device to jailbreak</li>
+<li>Don&rsquo;t put personal stuff on this jailbroken device. That means:
+
+<ul>
+<li>Keep this device away from your email accounts</li>
+<li>Turn off iCloud syncing, iMessage, Facetime, etc</li>
+<li>Don&rsquo;t access your bank accounts, PayPal, etc from this device</li>
+<li>Ideally, use a separate Apple account for this device</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Finding a suitable device isn&rsquo;t easy. Latest versions of iOS (10.3.3 at the time of writing) cannot be jailbroken, and devices cannot (usually) be reverted to a previous version of iOS. So you&rsquo;ll need to buy a device which is already running an old version of iOS.</p>
+
+<p><a href="https://www.theiphonewiki.com/wiki/Jailbreak" title="the iPhone wiki">the iPhone wiki</a> has a handly list of jailbreakable devices and iOS versions.</p>
+
+<p>There are two places where I&rsquo;d look to find a device for jailbreaking: eBay and high-street <em>cash converter</em> shops.</p>
+
+<h3>Buying a device on eBay</h3>
+
+<p>This is the cheaper option, but you need patience to find the right device. Most sellers will update the device to the latest version of iOS before listing the item on eBay. You can learn a lot from the photos attached to the listing.</p>
+
+<p><strong>Best case scenario</strong>: there&rsquo;s a photo of the <em>About</em> screen, because some sellers think that buyers like to see the device&rsquo;s IMEI. On that screen you can also see the iOS version</p>
+
+<p><strong>Not-so-good scenario</strong>: there are no photos of the device powered-on - you&rsquo;ll need to message the seller to ask them which version it&rsquo;s running. Don&rsquo;t expect to get a good reply - sellers often don&rsquo;t know, or they might guess</p>
+
+<p><strong>Worst-case scenario</strong>: the phone has been factory-reset (photos show the initial iOS <em>Hello</em> screen). In this case, it&rsquo;s not easy for the seller to check the iOS version</p>
+
+<h3>Buying a device at &ldquo;cash converters&rdquo;</h3>
+
+<p>You know <em>cash converters</em> - they&rsquo;re everywhere. Shop-windows full of pre-owned phones and tablets; bins inside the shop containing used DVDs and emoji-poop cushions.</p>
+
+<p>These are better than eBay for many reasons: you can handle the devices and check them for yourself, and they are less likely to be updated to the latest version of iOS. If you speak nicely to the manager, they might check all the phones for you, if they think they&rsquo;ll get an easy sale. Explain that you don&rsquo;t care about dents, scratches and carrier-locks. The only down-side is devices here will be slightly more expensive than on eBay.</p>
+
+<p>I bought a 16Gb iPhone 5s from a high-street store, running iOS 10.1.1.</p>
+
+<h3>Preparing for jailbreak</h3>
+
+<p>First, you&rsquo;ll need to take precautions against automatic iOS updates. If the latest version of iOS is automatically installed, your jailbreak is toast. So I fill the device with empty videos:</p>
+
+<ul>
+<li>disable iCloud Photo Libaray (otherwise the device will try to free space by uploading these images to iCloud - but <em>we want</em> the device to be almost full)</li>
+<li>open the camera app and record a 10-minute video</li>
+<li>open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory</li>
+<li>this means that the device won&rsquo;t have enough space to download iOS updates
+
+<ul>
+<li>to check: go to the <em>General -> Software Updates</em> part of the <em>Settings</em> app</li>
+<li>you should see the message <em>&ldquo;This update cannot be installed because it requires at least XXX MB of available storage&rdquo;</em>.</li>
+</ul>
+</li>
+<li>you&rsquo;ll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space</li>
+<li>each copy of the 10-minute video is around 150 MB on my device</li>
+</ul>
+
+
+<h3>Perform jailbreak</h3>
+
+<p>Next go back to <a href="https://www.theiphonewiki.com/wiki/Jailbreak" title="the iPhone wiki">the iPhone wiki</a> to check which jailbreak to use for your device. For my iOS 10.1.1 iPhone 5s I&rsquo;ll use <a href="https://yalu.qwertyoruiop.com" title="yalu102 beta 7">yalu 102 beta 7</a>, installed with Jay Freeman&rsquo;s <a href="http://www.cydiaimpactor.com" title="Cydia Impactor">Cydia Impactor</a>.</p>
+
+<ul>
+<li>download yalu102 and Cydia Impactor</li>
+<li>install Cydia Impactor</li>
+<li>attach your device</li>
+<li>run Cydia Impactor and make sure the device is selected in the top selectbox</li>
+<li>drag the yalu IPA to Cydia Impactor</li>
+<li>enter your Apple Developer credentials (you may need a application-specific password if you use 2FA - which you should be doing)</li>
+<li>yalu102 will be signed with your developer signing identity, and installed on the device</li>
+<li>launch yalu102 app on the device</li>
+<li>press <strong>go</strong></li>
+<li>device will restart</li>
+<li>when it has restarted, you&rsquo;ll find the Cydia app installed too</li>
+<li>since this is a semi-untethered jailbreak tool, you&rsquo;ll need to run yalu102 to re-jailbreak every time the device boots</li>
+</ul>
+
+
+<p>That&rsquo;s enough for this post. In <a href="/ios-hacking-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
+]]></content>
+  </entry>
+  
+</feed>

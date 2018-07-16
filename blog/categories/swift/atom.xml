@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: swift | Matthew's Dev Blog]]></title>
+  <link href="http://daringsnowball.net/blog/categories/swift/atom.xml" rel="self"/>
+  <link href="http://daringsnowball.net/"/>
+  <updated>2018-07-16T06:40:38+01:00</updated>
+  <id>http://daringsnowball.net/</id>
+  <author>
+    <name><![CDATA[Matthew Flint]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 4: storage and sync)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/"/>
+    <updated>2017-12-23T22:16:29+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-storage-and-sync</id>
+    <content type="html"><![CDATA[<p>This post gives an overview about how <em>Nearly Departed</em> Routes are stored and synced between iPhone and Apple Watch.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li>Part 4: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Route storage</h3>
+
+<p>Routes are stored in <code>UserDefaults</code> on the iPhone, and shared with the Watch using <em>WatchConnectivity</em>. To keep things simple, I have a <code>Storing</code> protocol for storing preferences and two implementations - one for the iPhone and one for the Watch.</p>
+
+<p>The iPhone implementation stores preferences in <code>UserDefaults</code> and also sends things to the Watch. The Watch implementation simply talks to its counterpart on the iPhone.</p>
+
+<p>After some experimentation (and help from <a href="https://developer.apple.com/library/content/documentation/General/Conceptual/WatchKitProgrammingGuide/SharingData.html">Apple&rsquo;s WatchConnectivity documentation</a> and <a href="https://kristina.io/watchos-2-how-to-communicate-between-devices-using-watch-connectivity/">Kristina Fox&rsquo;s blog</a>), I settled on this communication strategy:</p>
+
+<blockquote><ul>
+<li><p>When the Watch app first starts, it requests the current preferences by sending a &ldquo;get&rdquo; command to the iPhone via <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">([</span><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">cmd</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;</span> <span class="o">:</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="kr">get</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;],</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>  <span class="c1">// handle reply from phone</span>
+</span><span class='line'><span class="p">})</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>  <span class="c1">// handle error</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the iPhone, it sends data to the Watch by updating the <em>Application Context</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">updateApplicationContext</span><span class="p">(</span><span class="n">prefs</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the Watch, it sends data to the iPhone using <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="n">prefs</span><span class="p">,</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="nb">nil</span><span class="p">,</span> <span class="nl">errorHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>  <span class="c1">// handle error</span>
+</span><span class='line'><span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+</ul>
+</blockquote>
+
+<p>This strategy seems to work well; both <em>Application Context</em> and <em>Interactive Messaging</em> work reliably, and quickly. (I&rsquo;m testing with iOS 11.2 and WatchOS 4.2)</p>
+
+<h3>Phone dependence</h3>
+
+<p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 3: rewrite plans)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-plans/"/>
+    <updated>2017-12-12T01:26:14+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-rewrite-plans</id>
+    <content type="html"><![CDATA[<p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li>Part 3: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Goals</h3>
+
+<ul>
+<li>Rewrite in Swift</li>
+<li>&hellip; in a <em>Swifty</em> way</li>
+<li>With a decent set of unit tests</li>
+<li>Same features as the existing app:
+
+<ul>
+<li>departure boards (all departures from a station)</li>
+<li>station alerts (problems with services in this area)</li>
+<li>service alerts (problems with this particular service)</li>
+</ul>
+</li>
+<li>New features:
+
+<ul>
+<li>Show service details (the progress of an individual service during its journey)</li>
+<li>Reinstate Apple Watch support</li>
+<li>Architect the code so it wouldn&rsquo;t be impossible to add different datasources in the future</li>
+</ul>
+</li>
+</ul>
+
+
+<h3>Non-goals</h3>
+
+<ul>
+<li>Making money - this is primarily a learning exercise</li>
+</ul>
+
+
+<h3>Branching strategy</h3>
+
+<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
+
+<dl>
+<dt>master branch</dt>
+<dd>this is the nice well-tested branch</dd>
+<dt>ui-spike branch</dt>
+<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
+</dl>
+
+<h3>Using Laurine for localisation</h3>
+
+<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
+
+<p>You define your <code>Localizble.strings</code> file as normal:</p>
+
+<p><figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">PLATFORM_NUMBER</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">Platform</span> <span class="o">%</span><span class="p">@</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;;</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
+
+<p><figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="mi">4</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;)</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<h3>Frameworks</h3>
+
+<p>Nope.</p>
+
+<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
+
+<h3>Data models</h3>
+
+<p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
+
+<ol>
+<li>Explicitly, via the iOS app. (example: all departures from York to Leeds would be an instance of <code>DarwinDeparturesRoute</code>)</li>
+<li>Implicitly, from another route. (example: when viewing departures from York to Leeds, they might tap on a service to see its progress. This <code>DarwinServiceRoute</code> would be created automatically, containing the <code>serviceID</code> for the selected service)</li>
+</ol>
+
+
+<p>There is also a <code>NoRoutesRoute</code>. I&rsquo;m starting to develop an irrational dislike of optionals, so try to avoid them wherever I can. So if the user hasn&rsquo;t yet created any routes, we have a <code>NoRoutesRoute</code> there instead. (Thanks to <a href="https://twitter.com/kevinrutherford">Kevin Rutherford</a> for the inspiration to go down this route, with his &ldquo;write a program with no if statements&rdquo; kata)</p>
+
+<p>We need something to manage our collection of routes, and that&rsquo;s in the <code>RouteManager</code>. The user&rsquo;s <em>explicit</em> routes are stored in a collection, but we also allow other routes to pushed to form a stack, so the user can drill-down from one result to another.</p>
+
+<p>This might seem complex, but it allows the user to manage scenarios like this:</p>
+
+<ul>
+<li>User travelling from A to B, then B to C</li>
+<li>User creates explicit routes &ldquo;A to B&rdquo; and &ldquo;B to C&rdquo;</li>
+<li>When starting their journey, they select route &ldquo;A to B&rdquo; to see if their service is on-time</li>
+<li>Then they tap on the <em>service</em> to create an implicit Service route, which is popped onto the stack. They use this to track the progress of the service they&rsquo;re travelling on</li>
+<li>But they also want to see if the &ldquo;B to C&rdquo; service is running OK</li>
+<li>So they select the &ldquo;B to C&rdquo; route, and tap on a service to create a second implicit Service route, which is popped onto <em>that</em> stack</li>
+<li>Then they can switch between stacks, to keep track of both <em>services</em></li>
+</ul>
+
+
+<p><script src="/javascripts/mermaid.min.js"></script><div class="mermaid">
+graph LR
+RM[RouteManager]&ndash;>E1[&ldquo;Explicit route 1<br/>(example: A to B)&rdquo;]
+RM[RouteManager]&ndash;>E2[&ldquo;Explicit route 2<br/>(example: B to C)&rdquo;]
+subgraph stack
+E2&ndash;>I2[&ldquo;Implicit pushed route<br/>(example: 08:45 service from B to C)&rdquo;]
+end
+subgraph stack
+E1&ndash;>I1[&ldquo;Implicit pushed route<br/>(example: 08:00 service from A to B)&rdquo;]
+end
+</div></p>
+
+<p>This collection of stacks is stored in shared <code>UserDefaults</code>, so you could push a new route using the iPhone and then view its results on the Apple Watch.</p>
+
+<p><strong>Next, we&rsquo;ll need to get fetch data from an API</strong> for each type of route using <code>Entity</code> types which can fetch a particular kind of data. Right now there are two, but there could be more in the future:</p>
+
+<dl>
+<dt><code>DarwinDeparturesEntity</code></dt>
+<dd>gets OpenLDBWS departure boards for services between two stations (departures from station A calling at station B)</dd>
+<dt><code>DarwinServiceEntity</code></dt>
+<dd>gets OpenLDBWS service information (which returns the arrival/departure times for a service at each calling-point)</dd>
+</dl>
+
+<p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
+
+<p>There are three other <code>ResultSet</code> objects:</p>
+
+<dl>
+<dt><code>NoRoutesResultSet</code></dt>
+<dd>this is used when there are no routes defined in the app</dd>
+<dt><code>LoadingResultSet</code></dt>
+<dd>this is returned from Entities when they&rsquo;re fetching data for the first time</dd>
+<dt><code>ErrorResultSet</code></dt>
+<dd>returned from Entities if an error occurred while fetching or parsing data</dd>
+</dl>
+
+<p>With these three extra <code>ResultSet</code> objects I can define the Entity&rsquo;s <code>resultSet</code> property as non-optional:</p>
+
+<p><figure class='code'><figcaption><span>Entity.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">public</span> <span class="k">protocol</span> <span class="n">Entity</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">var</span> <span class="nl">resultSet</span><span class="p">:</span> <span class="n">ResultSet</span> <span class="p">{</span> <span class="kr">get</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>In the <a href="/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 2: tech background)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/"/>
+    <updated>2017-12-11T23:13:14+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-tech-background</id>
+    <content type="html"><![CDATA[<p>This post will give a little of the technical background to <em>Nearly Departed</em> and explain some of the reasons for the rewrite.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li>Part 2: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Headline tech features</h3>
+
+<ul>
+<li>Written in Objective C</li>
+<li>Kind-of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel">MVVM</a></li>
+<li>Very little unit-test coverage</li>
+<li>Made with a set of discrete service classes, injected using <a href="http://objection-framework.org">Objection</a></li>
+</ul>
+
+
+<h3>Why no WatchOS support any more?</h3>
+
+<p>The first WatchOS support was a WatchOS 1 <em>glance</em>. Communication between Watch and iPhone used shared <code>NSUserDefaults</code> and <a href="https://developer.apple.com/library/content/documentation/Darwin/Conceptual/MacOSXNotifcationOv/DarwinNotificationConcepts/DarwinNotificationConcepts.html">Darwin Notifications</a> were used by the two processes to notify each other that something had changed. (Remember that for WatchOS1 the Watch app process ran <em>on the iPhone</em>, effectively using the Watch as a separate screen. So Darwin Notifications could be used for interprocess comms because both processes were running on the same device)</p>
+
+<p>WatchOS 2 introduced <em>native</em> third-party apps, moving the Watch app process onto the Watch itself, so the Darwin Notification code was broken.</p>
+
+<h3>OpenLDBWS API</h3>
+
+<p><em>Nearly Departed</em> uses the <a href="https://lite.realtime.nationalrail.co.uk/openldbws/">OpenLDBWS</a> (&ldquo;Live Departure Boards Web Service&rdquo;) SOAP API from <a href="http://www.nationalrail.co.uk">National Rail</a>. Some definitions:</p>
+
+<dl>
+<dt>Darwin</dt>
+<dd>National Rail&rsquo;s system for tracking the movements of passenger services</dd>
+<dt>OpenLDBWS</dt>
+<dd>A SOAP API for accessing real-time information from Darwin</dd>
+</dl>
+
+<p>The API gives a <em>tonne</em> of great real-time data, including:</p>
+
+<ul>
+<li>Departure/arrival boards (which return the same data you would see on displays at any of our 2500 stations</li>
+<li>Progress information for all services which call at these stations. This includes:
+
+<ul>
+<li>Scheduled arrival/departure time at each calling point</li>
+<li>Actual or estimated arrival/departure time at each calling point</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Hats off to them, the <em>OpenLDBWS</em> team have done a great job. I have a couple of minor complaints (such as times being sent like <code>08:18</code> without timezone or date information) - but they&rsquo;ve managed to nicely model a proper complex set of data. Shame it&rsquo;s SOAP/XML though!</p>
+
+<h3>Station data</h3>
+
+<p>While the OpenLDBWS return some station data in the responses, I still need to maintain my own set of station data which is bundled with the app. My requirements are:</p>
+
+<ul>
+<li>For each station, I need the following:
+
+<ul>
+<li>Station name (such as &ldquo;Stevenage&rdquo;)</li>
+<li>The Computer Reservation System (CRS) code, which uniquely identifies this station in the API (example: &ldquo;SVG&rdquo;)</li>
+<li>location (latitude/longitude)</li>
+</ul>
+</li>
+<li>The app needs this data in <em>list</em> format (so it can search for stations by name or CRS code)</li>
+<li>But also in a format which can be searched by nearest station to a given location</li>
+</ul>
+
+
+<p>The data itself comes from two sources:</p>
+
+<dl>
+<dt><code>station_codes.csv</code></dt>
+<dd><a href="http://www.nationalrail.co.uk/stations_destinations/48541.aspx">from National Rail</a></dd>
+<dt><code>RailReferences.csv</code></dt>
+<dd><a href="https://data.gov.uk/dataset/naptan">from the UK Government NaPTAN dataset</a></dd>
+</dl>
+
+<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> also has location data in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
+
+<ul>
+<li>matches data from the <code>station_codes.csv</code> and <code>RailReferences.csv</code> files</li>
+<li>corrects inconsistencies between the two files (NaPTAN often has incorrect CSR codes)</li>
+<li>adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn&rsquo;t yet been updated)</li>
+<li>filters out some non-mainline stations (such as heritage rail or ferry terminals)</li>
+<li>converts easting/northing locations to latitude/longitude</li>
+<li>creates a two-dimensional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
+</ul>
+
+
+<p>The app reads this plist into memory in its tree structure for location searches, and flattens it to an array for name/CRS searches.</p>
+
+<h3>Architectural limitations</h3>
+
+<ul>
+<li>I frequently get asked to provide support for showing <em>ServiceDetails</em> data from OpenLWBWS - ie, data for a particular service - but the app was only designed to show <em>DepartureBoard</em> data</li>
+<li>The app wasn&rsquo;t written to use other data sources - so if I ever wanted to add London Underground data, it would be very difficult to do so</li>
+<li>It&rsquo;s just not very well written! ;-)</li>
+</ul>
+
+
+<h3>Next</h3>
+
+<p>In the <a href="/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 1: intro)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-intro/"/>
+    <updated>2017-12-11T19:01:48+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
+
+<ol>
+<li>it&rsquo;s written in Objective C, not Swift - and I desperately need some more exposure to Swift</li>
+<li>the code is difficult to maintain</li>
+<li>there are some features I want to add which can&rsquo;t easily be done with the current codebase</li>
+<li>fun</li>
+</ol>
+
+
+<p><a href="https://twitter.com/dwroboheadz">Someone</a> asked me to blog this, so here I am. This will hopefully chronicle the rewrite, until:</p>
+
+<ul>
+<li>I get bored of writing blogposts</li>
+<li>Dev stops, because I get distracted with something else, or</li>
+<li>It&rsquo;s released in the App Store</li>
+</ul>
+
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li>Part 1: intro</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Background</h3>
+
+<p><em>Nearly Departed</em> is an app to show live train departures in the UK. It doesn&rsquo;t do timetables, journey-planning or ticket purchases: just the live departures. It has an iOS app, of course, plus a today widget which can be accessed quickly from the iPhone lock screen. For a brief period, there was an Apple Watch <em>glance</em> too (until a WatchOS update broke the synchronisation mechanism).</p>
+
+<p>Here are some slightly old screenshots to show what it looks like:</p>
+
+<p><img class="left" src="/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
+
+<p>I wrote <em>Nearly Departed</em> in mid-2015, because I couldn&rsquo;t find a UK train departures app that I really liked. I was using <a href="https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8">&ldquo;UK Train Times&rdquo; by Agant</a>, which is a great app, but it wasn&rsquo;t quite right for me:</p>
+
+<ol>
+<li>the updates were infrequent and I was worried it would stop being supported</li>
+<li>there was no really quick way to access live-departure information (like an iOS today widget)</li>
+<li>no Apple Watch support</li>
+</ol>
+
+
+<p>If none of these things matter to you, then <em>UK Train Times</em> is well worth the purchase price.</p>
+
+<p>So, like any good developer, I started to write my own.</p>
+
+<h3>Feature summary</h3>
+
+<p>To give a little more context about the app, here are the major features:</p>
+
+<ul>
+<li>Show <em>live departure</em> information for pre-defined direct routes on the UK train network</li>
+<li>Display this information in iOS app or today widget</li>
+<li>Auto-reverse routes, based on time (morning/afternoon) or user&rsquo;s location (if location services are enabled)</li>
+</ul>
+
+
+<h3>Major releases</h3>
+
+<dl>
+<dt>1.0 (May 2015)</dt>
+<dd>First release; iOS app and today widget</dd>
+<dt>1.1 (June 2015)</dt>
+<dd>Apple Watch support and service alerts</dd>
+<dt>1.2 (July 2015)</dt>
+<dd>Many small UI tweaks</dd>
+<dt>1.3 (April 2016)</dt>
+<dd>Rail-replacement bus services; started work on supporting WatchOS 2</dd>
+<dt>1.4 (April 2016)</dt>
+<dd>Auto-reverse routes based on user&rsquo;s location, instead of using morning/afternoon</dd>
+<dt>1.5 (September 2016)</dt>
+<dd>Shows route messages (ie, why this service is delayed or cancelled); removed Watch support</dd>
+<dt>1.6 (November 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.7 (January 2017)</dt>
+<dd>Today widget improvements</dd>
+<dt>1.8 (January 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.9 (March 2017)</dt>
+<dd>Show all departures from your nearest station (if location services are enabled)</dd>
+<dt>1.10 (August 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.11 (October 2017)</dt>
+<dd>Hides slow services by default, after one user used a circular route the wrong way and took several hours to get home</dd>
+</dl>
+
+<h3> Next</h3>
+
+<p>In the <a href="/nearly-departed-rewrite-tech-background/">next post</a>, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+]]></content>
+  </entry>
+  
+</feed>

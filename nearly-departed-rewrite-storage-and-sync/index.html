@@ -1,0 +1,141 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Rewriting Nearly Departed (part 4: storage and sync)  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="This post gives an overview about how Nearly Departed Routes are stored and synced between iPhone and Apple Watch. This is part 4 of a multi-part &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Rewriting Nearly Departed (Part 4: Storage and Sync)</h2>
+	<div class="entry-content"><p>This post gives an overview about how <em>Nearly Departed</em> Routes are stored and synced between iPhone and Apple Watch.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li>Part 4: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Route storage</h3>
+
+<p>Routes are stored in <code>UserDefaults</code> on the iPhone, and shared with the Watch using <em>WatchConnectivity</em>. To keep things simple, I have a <code>Storing</code> protocol for storing preferences and two implementations - one for the iPhone and one for the Watch.</p>
+
+<p>The iPhone implementation stores preferences in <code>UserDefaults</code> and also sends things to the Watch. The Watch implementation simply talks to its counterpart on the iPhone.</p>
+
+<p>After some experimentation (and help from <a href="https://developer.apple.com/library/content/documentation/General/Conceptual/WatchKitProgrammingGuide/SharingData.html">Apple&rsquo;s WatchConnectivity documentation</a> and <a href="https://kristina.io/watchos-2-how-to-communicate-between-devices-using-watch-connectivity/">Kristina Fox&rsquo;s blog</a>), I settled on this communication strategy:</p>
+
+<blockquote><ul>
+<li><p>When the Watch app first starts, it requests the current preferences by sending a &ldquo;get&rdquo; command to the iPhone via <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">([</span><span class="s">&quot;cmd&quot;</span> <span class="o">:</span> <span class="s">&quot;get&quot;</span><span class="p">],</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle reply from phone</span>
+</span><span class='line'>  <span class="p">})</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the iPhone, it sends data to the Watch by updating the <em>Application Context</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">updateApplicationContext</span><span class="p">(</span><span class="n">prefs</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the Watch, it sends data to the iPhone using <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="n">prefs</span><span class="p">,</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="nb">nil</span><span class="p">,</span> <span class="nl">errorHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+</ul>
+</blockquote>
+
+<p>This strategy seems to work well; both <em>Application Context</em> and <em>Interactive Messaging</em> work reliably, and quickly. (I&rsquo;m testing with iOS 11.2 and WatchOS 4.2)</p>
+
+<h3>Phone dependence</h3>
+
+<p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2017-12-23T22:16:29+00:00" pubdate data-updated="true">Dec 23rd, 2017</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/nearlydeparted/'>nearlydeparted</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

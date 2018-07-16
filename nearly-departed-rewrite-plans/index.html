@@ -1,0 +1,244 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Rewriting Nearly Departed (part 3: rewrite plans)  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="So here&rsquo;s my plan for this rewrite of Nearly Departed. This is part 3 of a multi-part series: Part 1: intro
+Part 2: tech background
+Part 3: &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Rewriting Nearly Departed (Part 3: Rewrite Plans)</h2>
+	<div class="entry-content"><p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li>Part 3: rewrite plans</li>
+<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Goals</h3>
+
+<ul>
+<li>Rewrite in Swift</li>
+<li>&hellip; in a <em>Swifty</em> way</li>
+<li>With a decent set of unit tests</li>
+<li>Same features as the existing app:
+
+<ul>
+<li>departure boards (all departures from a station)</li>
+<li>station alerts (problems with services in this area)</li>
+<li>service alerts (problems with this particular service)</li>
+</ul>
+</li>
+<li>New features:
+
+<ul>
+<li>Show service details (the progress of an individual service during its journey)</li>
+<li>Reinstate Apple Watch support</li>
+<li>Architect the code so it wouldn&rsquo;t be impossible to add different datasources in the future</li>
+</ul>
+</li>
+</ul>
+
+
+<h3>Non-goals</h3>
+
+<ul>
+<li>Making money - this is primarily a learning exercise</li>
+</ul>
+
+
+<h3>Branching strategy</h3>
+
+<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
+
+<dl>
+<dt>master branch</dt>
+<dd>this is the nice well-tested branch</dd>
+<dt>ui-spike branch</dt>
+<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
+</dl>
+
+<h3>Using Laurine for localisation</h3>
+
+<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
+
+<p>You define your <code>Localizble.strings</code> file as normal:</p>
+
+<figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="s">&quot;PLATFORM_NUMBER&quot;</span> <span class="o">=</span> <span class="s">&quot;Platform %@&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
+
+<figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="s">&quot;4&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Frameworks</h3>
+
+<p>Nope.</p>
+
+<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
+
+<h3>Data models</h3>
+
+<p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
+
+<ol>
+<li>Explicitly, via the iOS app. (example: all departures from York to Leeds would be an instance of <code>DarwinDeparturesRoute</code>)</li>
+<li>Implicitly, from another route. (example: when viewing departures from York to Leeds, they might tap on a service to see its progress. This <code>DarwinServiceRoute</code> would be created automatically, containing the <code>serviceID</code> for the selected service)</li>
+</ol>
+
+
+<p>There is also a <code>NoRoutesRoute</code>. I&rsquo;m starting to develop an irrational dislike of optionals, so try to avoid them wherever I can. So if the user hasn&rsquo;t yet created any routes, we have a <code>NoRoutesRoute</code> there instead. (Thanks to <a href="https://twitter.com/kevinrutherford">Kevin Rutherford</a> for the inspiration to go down this route, with his &ldquo;write a program with no if statements&rdquo; kata)</p>
+
+<p>We need something to manage our collection of routes, and that&rsquo;s in the <code>RouteManager</code>. The user&rsquo;s <em>explicit</em> routes are stored in a collection, but we also allow other routes to pushed to form a stack, so the user can drill-down from one result to another.</p>
+
+<p>This might seem complex, but it allows the user to manage scenarios like this:</p>
+
+<ul>
+<li>User travelling from A to B, then B to C</li>
+<li>User creates explicit routes &ldquo;A to B&rdquo; and &ldquo;B to C&rdquo;</li>
+<li>When starting their journey, they select route &ldquo;A to B&rdquo; to see if their service is on-time</li>
+<li>Then they tap on the <em>service</em> to create an implicit Service route, which is popped onto the stack. They use this to track the progress of the service they&rsquo;re travelling on</li>
+<li>But they also want to see if the &ldquo;B to C&rdquo; service is running OK</li>
+<li>So they select the &ldquo;B to C&rdquo; route, and tap on a service to create a second implicit Service route, which is popped onto <em>that</em> stack</li>
+<li>Then they can switch between stacks, to keep track of both <em>services</em></li>
+</ul>
+
+
+<script src="/javascripts/mermaid.min.js"></script>
+
+
+<div class="mermaid">
+graph LR
+RM[RouteManager]-->E1["Explicit route 1<br/>(example: A to B)"]
+RM[RouteManager]-->E2["Explicit route 2<br/>(example: B to C)"]
+subgraph stack
+E2-->I2["Implicit pushed route<br/>(example: 08:45 service from B to C)"]
+end
+subgraph stack
+E1-->I1["Implicit pushed route<br/>(example: 08:00 service from A to B)"]
+end
+</div>
+
+
+<p>This collection of stacks is stored in shared <code>UserDefaults</code>, so you could push a new route using the iPhone and then view its results on the Apple Watch.</p>
+
+<p><strong>Next, we&rsquo;ll need to get fetch data from an API</strong> for each type of route using <code>Entity</code> types which can fetch a particular kind of data. Right now there are two, but there could be more in the future:</p>
+
+<dl>
+<dt><code>DarwinDeparturesEntity</code></dt>
+<dd>gets OpenLDBWS departure boards for services between two stations (departures from station A calling at station B)</dd>
+<dt><code>DarwinServiceEntity</code></dt>
+<dd>gets OpenLDBWS service information (which returns the arrival/departure times for a service at each calling-point)</dd>
+</dl>
+
+<p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
+
+<p>There are three other <code>ResultSet</code> objects:</p>
+
+<dl>
+<dt><code>NoRoutesResultSet</code></dt>
+<dd>this is used when there are no routes defined in the app</dd>
+<dt><code>LoadingResultSet</code></dt>
+<dd>this is returned from Entities when they&rsquo;re fetching data for the first time</dd>
+<dt><code>ErrorResultSet</code></dt>
+<dd>returned from Entities if an error occurred while fetching or parsing data</dd>
+</dl>
+
+<p>With these three extra <code>ResultSet</code> objects I can define the Entity&rsquo;s <code>resultSet</code> property as non-optional:</p>
+
+<figure class='code'><figcaption><span>Entity.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">public</span> <span class="k">protocol</span> <span class="n">Entity</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">var</span> <span class="nl">resultSet</span><span class="p">:</span> <span class="n">ResultSet</span> <span class="p">{</span> <span class="kr">get</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In the <a href="/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2017-12-12T01:26:14+00:00" pubdate data-updated="true">Dec 12th, 2017</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/nearlydeparted/'>nearlydeparted</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

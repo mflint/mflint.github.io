@@ -1,0 +1,1104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Matthew's Dev Blog]]></title>
+  <link href="http://daringsnowball.net/atom.xml" rel="self"/>
+  <link href="http://daringsnowball.net/"/>
+  <updated>2018-07-16T06:40:38+01:00</updated>
+  <id>http://daringsnowball.net/</id>
+  <author>
+    <name><![CDATA[Matthew Flint]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 4: storage and sync)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/"/>
+    <updated>2017-12-23T22:16:29+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-storage-and-sync</id>
+    <content type="html"><![CDATA[<p>This post gives an overview about how <em>Nearly Departed</em> Routes are stored and synced between iPhone and Apple Watch.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li>Part 4: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Route storage</h3>
+
+<p>Routes are stored in <code>UserDefaults</code> on the iPhone, and shared with the Watch using <em>WatchConnectivity</em>. To keep things simple, I have a <code>Storing</code> protocol for storing preferences and two implementations - one for the iPhone and one for the Watch.</p>
+
+<p>The iPhone implementation stores preferences in <code>UserDefaults</code> and also sends things to the Watch. The Watch implementation simply talks to its counterpart on the iPhone.</p>
+
+<p>After some experimentation (and help from <a href="https://developer.apple.com/library/content/documentation/General/Conceptual/WatchKitProgrammingGuide/SharingData.html">Apple&rsquo;s WatchConnectivity documentation</a> and <a href="https://kristina.io/watchos-2-how-to-communicate-between-devices-using-watch-connectivity/">Kristina Fox&rsquo;s blog</a>), I settled on this communication strategy:</p>
+
+<blockquote><ul>
+<li><p>When the Watch app first starts, it requests the current preferences by sending a &ldquo;get&rdquo; command to the iPhone via <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">([</span><span class="s">&quot;cmd&quot;</span> <span class="o">:</span> <span class="s">&quot;get&quot;</span><span class="p">],</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle reply from phone</span>
+</span><span class='line'>  <span class="p">})</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the iPhone, it sends data to the Watch by updating the <em>Application Context</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">updateApplicationContext</span><span class="p">(</span><span class="n">prefs</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+<li><p>If preferences change on the Watch, it sends data to the iPhone using <em>Interactive Messaging</em>:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'>  <span class="c1">// prefs is [String : Any]</span>
+</span><span class='line'>  <span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="n">prefs</span><span class="p">,</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="nb">nil</span><span class="p">,</span> <span class="nl">errorHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+</span><span class='line'>    <span class="c1">// handle error</span>
+</span><span class='line'>  <span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure></p></li>
+</ul>
+</blockquote>
+
+<p>This strategy seems to work well; both <em>Application Context</em> and <em>Interactive Messaging</em> work reliably, and quickly. (I&rsquo;m testing with iOS 11.2 and WatchOS 4.2)</p>
+
+<h3>Phone dependence</h3>
+
+<p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 3: rewrite plans)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-plans/"/>
+    <updated>2017-12-12T01:26:14+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-rewrite-plans</id>
+    <content type="html"><![CDATA[<p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li>Part 3: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Goals</h3>
+
+<ul>
+<li>Rewrite in Swift</li>
+<li>&hellip; in a <em>Swifty</em> way</li>
+<li>With a decent set of unit tests</li>
+<li>Same features as the existing app:
+
+<ul>
+<li>departure boards (all departures from a station)</li>
+<li>station alerts (problems with services in this area)</li>
+<li>service alerts (problems with this particular service)</li>
+</ul>
+</li>
+<li>New features:
+
+<ul>
+<li>Show service details (the progress of an individual service during its journey)</li>
+<li>Reinstate Apple Watch support</li>
+<li>Architect the code so it wouldn&rsquo;t be impossible to add different datasources in the future</li>
+</ul>
+</li>
+</ul>
+
+
+<h3>Non-goals</h3>
+
+<ul>
+<li>Making money - this is primarily a learning exercise</li>
+</ul>
+
+
+<h3>Branching strategy</h3>
+
+<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
+
+<dl>
+<dt>master branch</dt>
+<dd>this is the nice well-tested branch</dd>
+<dt>ui-spike branch</dt>
+<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
+</dl>
+
+<h3>Using Laurine for localisation</h3>
+
+<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
+
+<p>You define your <code>Localizble.strings</code> file as normal:</p>
+
+<figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="s">&quot;PLATFORM_NUMBER&quot;</span> <span class="o">=</span> <span class="s">&quot;Platform %@&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
+
+<figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="s">&quot;4&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Frameworks</h3>
+
+<p>Nope.</p>
+
+<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
+
+<h3>Data models</h3>
+
+<p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
+
+<ol>
+<li>Explicitly, via the iOS app. (example: all departures from York to Leeds would be an instance of <code>DarwinDeparturesRoute</code>)</li>
+<li>Implicitly, from another route. (example: when viewing departures from York to Leeds, they might tap on a service to see its progress. This <code>DarwinServiceRoute</code> would be created automatically, containing the <code>serviceID</code> for the selected service)</li>
+</ol>
+
+
+<p>There is also a <code>NoRoutesRoute</code>. I&rsquo;m starting to develop an irrational dislike of optionals, so try to avoid them wherever I can. So if the user hasn&rsquo;t yet created any routes, we have a <code>NoRoutesRoute</code> there instead. (Thanks to <a href="https://twitter.com/kevinrutherford">Kevin Rutherford</a> for the inspiration to go down this route, with his &ldquo;write a program with no if statements&rdquo; kata)</p>
+
+<p>We need something to manage our collection of routes, and that&rsquo;s in the <code>RouteManager</code>. The user&rsquo;s <em>explicit</em> routes are stored in a collection, but we also allow other routes to pushed to form a stack, so the user can drill-down from one result to another.</p>
+
+<p>This might seem complex, but it allows the user to manage scenarios like this:</p>
+
+<ul>
+<li>User travelling from A to B, then B to C</li>
+<li>User creates explicit routes &ldquo;A to B&rdquo; and &ldquo;B to C&rdquo;</li>
+<li>When starting their journey, they select route &ldquo;A to B&rdquo; to see if their service is on-time</li>
+<li>Then they tap on the <em>service</em> to create an implicit Service route, which is popped onto the stack. They use this to track the progress of the service they&rsquo;re travelling on</li>
+<li>But they also want to see if the &ldquo;B to C&rdquo; service is running OK</li>
+<li>So they select the &ldquo;B to C&rdquo; route, and tap on a service to create a second implicit Service route, which is popped onto <em>that</em> stack</li>
+<li>Then they can switch between stacks, to keep track of both <em>services</em></li>
+</ul>
+
+
+<script src="http://daringsnowball.net/javascripts/mermaid.min.js"></script>
+
+
+<div class="mermaid">
+graph LR
+RM[RouteManager]-->E1["Explicit route 1<br/>(example: A to B)"]
+RM[RouteManager]-->E2["Explicit route 2<br/>(example: B to C)"]
+subgraph stack
+E2-->I2["Implicit pushed route<br/>(example: 08:45 service from B to C)"]
+end
+subgraph stack
+E1-->I1["Implicit pushed route<br/>(example: 08:00 service from A to B)"]
+end
+</div>
+
+
+<p>This collection of stacks is stored in shared <code>UserDefaults</code>, so you could push a new route using the iPhone and then view its results on the Apple Watch.</p>
+
+<p><strong>Next, we&rsquo;ll need to get fetch data from an API</strong> for each type of route using <code>Entity</code> types which can fetch a particular kind of data. Right now there are two, but there could be more in the future:</p>
+
+<dl>
+<dt><code>DarwinDeparturesEntity</code></dt>
+<dd>gets OpenLDBWS departure boards for services between two stations (departures from station A calling at station B)</dd>
+<dt><code>DarwinServiceEntity</code></dt>
+<dd>gets OpenLDBWS service information (which returns the arrival/departure times for a service at each calling-point)</dd>
+</dl>
+
+<p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
+
+<p>There are three other <code>ResultSet</code> objects:</p>
+
+<dl>
+<dt><code>NoRoutesResultSet</code></dt>
+<dd>this is used when there are no routes defined in the app</dd>
+<dt><code>LoadingResultSet</code></dt>
+<dd>this is returned from Entities when they&rsquo;re fetching data for the first time</dd>
+<dt><code>ErrorResultSet</code></dt>
+<dd>returned from Entities if an error occurred while fetching or parsing data</dd>
+</dl>
+
+<p>With these three extra <code>ResultSet</code> objects I can define the Entity&rsquo;s <code>resultSet</code> property as non-optional:</p>
+
+<figure class='code'><figcaption><span>Entity.swift </span></figcaption>
+<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">public</span> <span class="k">protocol</span> <span class="n">Entity</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">var</span> <span class="nl">resultSet</span><span class="p">:</span> <span class="n">ResultSet</span> <span class="p">{</span> <span class="kr">get</span> <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 2: tech background)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/"/>
+    <updated>2017-12-11T23:13:14+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed-tech-background</id>
+    <content type="html"><![CDATA[<p>This post will give a little of the technical background to <em>Nearly Departed</em> and explain some of the reasons for the rewrite.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
+<li>Part 2: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Headline tech features</h3>
+
+<ul>
+<li>Written in Objective C</li>
+<li>Kind-of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel">MVVM</a></li>
+<li>Very little unit-test coverage</li>
+<li>Made with a set of discrete service classes, injected using <a href="http://objection-framework.org">Objection</a></li>
+</ul>
+
+
+<h3>Why no WatchOS support any more?</h3>
+
+<p>The first WatchOS support was a WatchOS 1 <em>glance</em>. Communication between Watch and iPhone used shared <code>NSUserDefaults</code> and <a href="https://developer.apple.com/library/content/documentation/Darwin/Conceptual/MacOSXNotifcationOv/DarwinNotificationConcepts/DarwinNotificationConcepts.html">Darwin Notifications</a> were used by the two processes to notify each other that something had changed. (Remember that for WatchOS1 the Watch app process ran <em>on the iPhone</em>, effectively using the Watch as a separate screen. So Darwin Notifications could be used for interprocess comms because both processes were running on the same device)</p>
+
+<p>WatchOS 2 introduced <em>native</em> third-party apps, moving the Watch app process onto the Watch itself, so the Darwin Notification code was broken.</p>
+
+<h3>OpenLDBWS API</h3>
+
+<p><em>Nearly Departed</em> uses the <a href="https://lite.realtime.nationalrail.co.uk/openldbws/">OpenLDBWS</a> (&ldquo;Live Departure Boards Web Service&rdquo;) SOAP API from <a href="http://www.nationalrail.co.uk">National Rail</a>. Some definitions:</p>
+
+<dl>
+<dt>Darwin</dt>
+<dd>National Rail&rsquo;s system for tracking the movements of passenger services</dd>
+<dt>OpenLDBWS</dt>
+<dd>A SOAP API for accessing real-time information from Darwin</dd>
+</dl>
+
+<p>The API gives a <em>tonne</em> of great real-time data, including:</p>
+
+<ul>
+<li>Departure/arrival boards (which return the same data you would see on displays at any of our 2500 stations</li>
+<li>Progress information for all services which call at these stations. This includes:
+
+<ul>
+<li>Scheduled arrival/departure time at each calling point</li>
+<li>Actual or estimated arrival/departure time at each calling point</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Hats off to them, the <em>OpenLDBWS</em> team have done a great job. I have a couple of minor complaints (such as times being sent like <code>08:18</code> without timezone or date information) - but they&rsquo;ve managed to nicely model a proper complex set of data. Shame it&rsquo;s SOAP/XML though!</p>
+
+<h3>Station data</h3>
+
+<p>While the OpenLDBWS return some station data in the responses, I still need to maintain my own set of station data which is bundled with the app. My requirements are:</p>
+
+<ul>
+<li>For each station, I need the following:
+
+<ul>
+<li>Station name (such as &ldquo;Stevenage&rdquo;)</li>
+<li>The Computer Reservation System (CRS) code, which uniquely identifies this station in the API (example: &ldquo;SVG&rdquo;)</li>
+<li>location (latitude/longitude)</li>
+</ul>
+</li>
+<li>The app needs this data in <em>list</em> format (so it can search for stations by name or CRS code)</li>
+<li>But also in a format which can be searched by nearest station to a given location</li>
+</ul>
+
+
+<p>The data itself comes from two sources:</p>
+
+<dl>
+<dt><code>station_codes.csv</code></dt>
+<dd><a href="http://www.nationalrail.co.uk/stations_destinations/48541.aspx">from National Rail</a></dd>
+<dt><code>RailReferences.csv</code></dt>
+<dd><a href="https://data.gov.uk/dataset/naptan">from the UK Government NaPTAN dataset</a></dd>
+</dl>
+
+<p><code>station_codes.csv</code> is simply a list of station names and their CRS codes, whereas <code>RailReferences.csv</code> also has location data in <a href="https://en.wikipedia.org/wiki/Easting_and_northing">easting/northing</a> format. Unfortunately the data doesn&rsquo;t completely match between those two files, so I have a Ruby script which does a few things:</p>
+
+<ul>
+<li>matches data from the <code>station_codes.csv</code> and <code>RailReferences.csv</code> files</li>
+<li>corrects inconsistencies between the two files (NaPTAN often has incorrect CSR codes)</li>
+<li>adds some data which is missing from one file or the other (usually because a new station has opened but the source data hasn&rsquo;t yet been updated)</li>
+<li>filters out some non-mainline stations (such as heritage rail or ferry terminals)</li>
+<li>converts easting/northing locations to latitude/longitude</li>
+<li>creates a two-dimensional binary tree based on station locations, and writes it to a 670K <code>.plist</code> file. The tree is 12 levels deep, each level being split alternatively by longitude/latitude.</li>
+</ul>
+
+
+<p>The app reads this plist into memory in its tree structure for location searches, and flattens it to an array for name/CRS searches.</p>
+
+<h3>Architectural limitations</h3>
+
+<ul>
+<li>I frequently get asked to provide support for showing <em>ServiceDetails</em> data from OpenLWBWS - ie, data for a particular service - but the app was only designed to show <em>DepartureBoard</em> data</li>
+<li>The app wasn&rsquo;t written to use other data sources - so if I ever wanted to add London Underground data, it would be very difficult to do so</li>
+<li>It&rsquo;s just not very well written! ;-)</li>
+</ul>
+
+
+<h3>Next</h3>
+
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">next post</a>, I&rsquo;ll discuss my high-level plans for the rewrite.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Rewriting Nearly Departed (part 1: intro)]]></title>
+    <link href="http://daringsnowball.net/nearly-departed-rewrite-intro/"/>
+    <updated>2017-12-11T19:01:48+00:00</updated>
+    <id>http://daringsnowball.net/rewriting-nearly-departed</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
+
+<ol>
+<li>it&rsquo;s written in Objective C, not Swift - and I desperately need some more exposure to Swift</li>
+<li>the code is difficult to maintain</li>
+<li>there are some features I want to add which can&rsquo;t easily be done with the current codebase</li>
+<li>fun</li>
+</ol>
+
+
+<p><a href="https://twitter.com/dwroboheadz">Someone</a> asked me to blog this, so here I am. This will hopefully chronicle the rewrite, until:</p>
+
+<ul>
+<li>I get bored of writing blogposts</li>
+<li>Dev stops, because I get distracted with something else, or</li>
+<li>It&rsquo;s released in the App Store</li>
+</ul>
+
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li>Part 1: intro</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
+<li><a href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+</ul>
+</blockquote>
+
+<h3>Background</h3>
+
+<p><em>Nearly Departed</em> is an app to show live train departures in the UK. It doesn&rsquo;t do timetables, journey-planning or ticket purchases: just the live departures. It has an iOS app, of course, plus a today widget which can be accessed quickly from the iPhone lock screen. For a brief period, there was an Apple Watch <em>glance</em> too (until a WatchOS update broke the synchronisation mechanism).</p>
+
+<p>Here are some slightly old screenshots to show what it looks like:</p>
+
+<p><img class="left" src="http://daringsnowball.net/images/nearly-departed-1-app1.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://daringsnowball.net/images/nearly-departed-1-app2.jpg" width="320" height="480" title="title alt" >
+<img class="left" src="http://daringsnowball.net/images/nearly-departed-1-widget.jpg" width="320" height="480" title="title alt" ></p>
+
+<p>I wrote <em>Nearly Departed</em> in mid-2015, because I couldn&rsquo;t find a UK train departures app that I really liked. I was using <a href="https://itunes.apple.com/gb/app/uk-train-times/id306687757?mt=8">&ldquo;UK Train Times&rdquo; by Agant</a>, which is a great app, but it wasn&rsquo;t quite right for me:</p>
+
+<ol>
+<li>the updates were infrequent and I was worried it would stop being supported</li>
+<li>there was no really quick way to access live-departure information (like an iOS today widget)</li>
+<li>no Apple Watch support</li>
+</ol>
+
+
+<p>If none of these things matter to you, then <em>UK Train Times</em> is well worth the purchase price.</p>
+
+<p>So, like any good developer, I started to write my own.</p>
+
+<h3>Feature summary</h3>
+
+<p>To give a little more context about the app, here are the major features:</p>
+
+<ul>
+<li>Show <em>live departure</em> information for pre-defined direct routes on the UK train network</li>
+<li>Display this information in iOS app or today widget</li>
+<li>Auto-reverse routes, based on time (morning/afternoon) or user&rsquo;s location (if location services are enabled)</li>
+</ul>
+
+
+<h3>Major releases</h3>
+
+<dl>
+<dt>1.0 (May 2015)</dt>
+<dd>First release; iOS app and today widget</dd>
+<dt>1.1 (June 2015)</dt>
+<dd>Apple Watch support and service alerts</dd>
+<dt>1.2 (July 2015)</dt>
+<dd>Many small UI tweaks</dd>
+<dt>1.3 (April 2016)</dt>
+<dd>Rail-replacement bus services; started work on supporting WatchOS 2</dd>
+<dt>1.4 (April 2016)</dt>
+<dd>Auto-reverse routes based on user&rsquo;s location, instead of using morning/afternoon</dd>
+<dt>1.5 (September 2016)</dt>
+<dd>Shows route messages (ie, why this service is delayed or cancelled); removed Watch support</dd>
+<dt>1.6 (November 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.7 (January 2017)</dt>
+<dd>Today widget improvements</dd>
+<dt>1.8 (January 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.9 (March 2017)</dt>
+<dd>Show all departures from your nearest station (if location services are enabled)</dd>
+<dt>1.10 (August 2017)</dt>
+<dd>Station updates</dd>
+<dt>1.11 (October 2017)</dt>
+<dd>Hides slow services by default, after one user used a circular route the wrong way and took several hours to get home</dd>
+</dl>
+
+<h3> Next</h3>
+
+<p>In the <a href="http://daringsnowball.net/nearly-departed-rewrite-tech-background/">next post</a>, I&rsquo;ll discuss the technical implementation of the app, which should start to explain why I&rsquo;m rewriting it.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 5)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-5/"/>
+    <updated>2017-09-03T20:41:40+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-5</id>
+    <content type="html"><![CDATA[<p>Last time, we played with <a href="http://www.cycript.org">Cycript</a>. Now let&rsquo;s briefly explore <a href="https://www.frida.re">Frida</a>, which is a framework for instrumenting running apps and performing code-injection.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 5 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li>Part 5: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Frida?</h3>
+
+<p><a href="https://www.frida.re">Frida</a> is a dynamic code instrumentation and injection toolkit. We can use it to monitor what&rsquo;s going on while an app is running, intercept function calls and perform arbitrary operations.</p>
+
+<h3>Frida installation</h3>
+
+<p>There&rsquo;s a <a href="https://www.frida.re/docs/ios/">complete set of installation instructions on the Frida website</a>, but here&rsquo;s the tl;dr:</p>
+
+<ul>
+<li>open <em>Cydia</em> on the jailbroken device</li>
+<li>select the <em>Sources</em> tab</li>
+<li>Edit, then Add a new source: <code>https://build.frida.re</code></li>
+<li>Now you should be able to search for <code>Frida</code> and install it</li>
+</ul>
+
+
+<p>Finally, on your Mac, install the Frida client:</p>
+
+<p><code>pip install --user frida</code></p>
+
+<h3>Testing the installation</h3>
+
+<p>Connect the device to your Mac over USB, then as Frida for a list of running applications on the device:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Mac:~ matthew$ frida-ps -Ua
+</span><span class='line'>PID  Name   Identifier          
+</span><span class='line'>---  -----  --------------------
+</span><span class='line'>519  Cydia  com.saurik.Cydia    
+</span><span class='line'>379  Mail   com.apple.mobilemail</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Instrumenting function calls in a 3rd-party app</h3>
+
+<p>I&rsquo;ve installed the <a href="https://itunes.apple.com/gb/app/amazon/id335187483?mt=8">Amazon UK app</a> on the device, and we&rsquo;ll see what we can discover about how logins are performed. For this, we&rsquo;ll use <a href="https://www.frida.re/docs/frida-trace/">frida-trace</a>.</p>
+
+<ul>
+<li>start the Amazon app on the device</li>
+<li>it looks like the &ldquo;Sign In&rdquo; feature happens in a modal ViewController - so we&rsquo;ll try looking for <code>viewWillAppear:</code> calls:
+
+<ul>
+<li><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* viewWillAppear*]"</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>&hellip; which gives this output when we tap the <em>Sign In</em> button:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> 13506 ms  -[AWModalNavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13506 ms     | -[UINavigationController viewWillAppear:0x1 ]
+</span><span class='line'> 13507 ms     |    | -[UIViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms  -[AIWebViewController viewWillAppear:0x1 ]
+</span><span class='line'> 13517 ms     | -[UIViewController viewWillAppear:0x1 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hmm, <code>AIWebViewController</code>. Are they using an embedded <code>UIWebView</code>? Let&rsquo;s check:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView *]"</code></p>
+
+<p>Whoa, loads of output there too. But a <code>UIWebView</code> which performs a login is useless without a delegate to pass information back to. We should find it.</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[UIWebView setDelegate:]"</code></p>
+
+<p>&hellip; which shows this when we tap <em>Sign In</em>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Instrumenting functions...                                              
+</span><span class='line'>-[UIWebView setDelegate:]: Loaded handler at "/Users/matthew/Dev/Temp/__handlers__/__UIWebView_setDelegate__.js"
+</span><span class='line'>Started tracing 1 function. Press Ctrl+C to stop.                       
+</span><span class='line'>           /* TID 0x503 */
+</span><span class='line'>  5608 ms  -[UIWebView setDelegate:0x1026737c0 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So we have a delegate being set, but no idea what kind of object that is. It probably doesn&rsquo;t matter, because we can easily hook into <a href="https://developer.apple.com/documentation/uikit/uiwebviewdelegate">the callback functions in the <code>UIWebViewDelegate</code> protocol</a>. We&rsquo;ll try hooking into <code>webView:shouldStartLoadWith:navigationType:</code>:</p>
+
+<p><code>frida-trace -U -f com.amazon.AmazonUK -m "-[* *shouldStartLoadWith*]"</code></p>
+
+<p>And sure enough, this is logged every time the <em>Sign In</em> webpage loads content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  7081 ms  -[AIWebViewController webView:0x102508130 shouldStartLoadWithRequest:0x170206510 navigationType:0x5 ]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The second parameter to that call is an <code>NSURLRequest</code>. I&rsquo;d love to see what&rsquo;s in there - and we can do just that, by editing Frida&rsquo;s JavaScript hooks. Frida kindly generates some template hooks for us. The one we want is <code>__handlers__/__AIWebViewController_webView_sh_-4df00585.js</code>. (Yours may be named slightly differently)</p>
+
+<p>If we edit this file, we can see how that previous piece of logging was performed: there are two hooks, for when the function starts (<code>onEnter</code>) and finishes (<code>onLeave</code>).</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 4)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-4/"/>
+    <updated>2017-09-03T11:58:24+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-4</id>
+    <content type="html"><![CDATA[<p>OK team, it gets slightly more exciting now: lets tweak an iOS app at runtime, using Jay Freeman&rsquo;s <em>Cycript</em> tool.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 4 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li>Part 4: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>What is Cycript?</h3>
+
+<p>Cycript is a tool based around a JavaScript interpreter, which can inject itself into another running process. It provides a rich set of features to bridge between C, C++, Objective C (and Java, if that&rsquo;s your thing) into JavaScript. You can use it for inspecting and manipulating running processes.</p>
+
+<h3>Download Cycript and copy to the device</h3>
+
+<p>Let&rsquo;s start by going to the <a href="http://www.cycript.org">Cycript homepage</a> and downloading the SDK. I assume it&rsquo;s unzipped into your Downloads folder. Then we can copy it over to the device:</p>
+
+<p><code>tar -czf - ~/Downloads/cycript_0 | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>(This will take a minute to complete - be patient)</p>
+
+<p>The <a href="http://www.cycript.org/manual/">Cycript manual</a> is a great detailed read - I recommend spending 30 minutes to read the whole thing. For now, let&rsquo;s hook it up to the Calculator app and see what it can do.</p>
+
+<h3>Cycript the Calculator app</h3>
+
+<p>Launch the Calculator app on the device, and ssh into it. <em>Cycript</em> can attach to processes by <em>pid</em> or by name. I&rsquo;m weird and like to use the <em>pid</em>, but here&rsquo;s how you&rsquo;d do it both ways:</p>
+
+<p><code>./cycript_0/cycript -p 520</code></p>
+
+<p><code>./cycript_0/cycript -p Calculator</code></p>
+
+<p>When you&rsquo;ve finished with <em>Cycript</em>, you can exit by typing <code>?exit</code> or send the <code>EOF</code> character (^D).</p>
+
+<p>We&rsquo;ll start with a simple query to see what&rsquo;s on the screen. Let&rsquo;s use the <code>choose</code> command to find the some ViewController classes:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cy# choose(UIViewController)
+</span><span class='line'>[#"&lt;Calculator.CalculatorController: 0x100205170&gt;",
+</span><span class='line'>#"&lt;Calculator.DisplayViewController: 0x1002054c0&gt;",
+</span><span class='line'>#"&lt;Calculator.KeypadViewController: 0x100205a10&gt;"]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Interesting! Looks like there&rsquo;s a main <code>CalculatorController</code> and two child ViewControllers for the the display and the keyboard. Sweet.</p>
+
+<p>So what about labels?</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>cy# choose(UILabel)
+</span><span class='line'>[#"&lt;Calculator.CalculatorKeypadLabel: 0x10030c540; baseClass = UILabel; frame = (160 1.5; 79 79); text = '%'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408c7b0&gt;&gt;",
+</span><span class='line'>#"&lt;UILabel: 0x10030da30; frame = (257.5 68.5; 47.5 99.5); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17408bc70&gt;&gt;",
+</span><span class='line'>#"&lt;UILabel: 0x100206eb0; frame = (18 142.5; 0 0); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008c120&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d080; baseClass = UILabel; frame = (1.5 1.5; 78.5 79); text = 'C'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cad0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020d830; baseClass = UILabel; frame = (80.5 1.5; 79 79); text = '\xef\xbf\xbc'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce40&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x10020ff90; baseClass = UILabel; frame = (1.5 81; 78.5 79); text = '7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008ce90&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002105c0; baseClass = UILabel; frame = (239.5 1.5; 79 79); text = '\xc3\xb7'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cee0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002108c0; baseClass = UILabel; frame = (80.5 81; 79 79); text = '8'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d1b0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100210b50; baseClass = UILabel; frame = (160 81; 79 79); text = '9'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008cfd0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100210de0; baseClass = UILabel; frame = (239.5 81; 79 79); text = '\xc3\x97'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d390&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211070; baseClass = UILabel; frame = (1.5 160.5; 78.5 79); text = '4'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d480&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211610; baseClass = UILabel; frame = (80.5 160.5; 79 79); text = '5'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d570&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002118a0; baseClass = UILabel; frame = (160 160.5; 79 79); text = '6'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d660&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211b30; baseClass = UILabel; frame = (239.5 160.5; 79 79); text = '\xe2\x88\x92'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d750&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100211dc0; baseClass = UILabel; frame = (1.5 240; 78.5 79); text = '1'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d840&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212050; baseClass = UILabel; frame = (80.5 240; 79 79); text = '2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008d930&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x1002122e0; baseClass = UILabel; frame = (160 240; 79 79); text = '3'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008da20&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212570; baseClass = UILabel; frame = (239.5 240; 79 79); text = '+'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008db10&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212800; baseClass = UILabel; frame = (1.5 319.5; 78.5 79); text = '0'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dc00&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212a90; baseClass = UILabel; frame = (80.5 319.5; 79 79); userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dcf0&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100212d20; baseClass = UILabel; frame = (160 319.5; 79 79); text = '\xe2\x80\xa2'; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008dd90&gt;&gt;",
+</span><span class='line'>#"&lt;Calculator.CalculatorKeypadLabel: 0x100213c00; baseClass = UILabel; frame = (239.5 319.5; 79 79); text = '='; userInteractionEnabled = NO; layer = &lt;_UILabelLayer: 0x17008e010&gt;&gt;"]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yup, there&rsquo;s a shedload of labels, as you&rsquo;d expect. Can we change one?</p>
+
+<p>Find the &ldquo;5&rdquo; label and get it&rsquo;s memory address. Mine is at <code>0x100211610</code>. We can assign a variable to this memory address, and easily change its label to <em>emoji poop</em>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>var label5=new Instance(0x100211610)
+</span><span class='line'>label5.text=@"\ud83d\udca9"</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Cycript</em> is a great tool, and can do much more than this trivial change.</p>
+
+<p>Next time: we&rsquo;ll have play with <a href="https://www.frida.re">Frida</a>, an instrumentation and code-injection toolkit.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 3)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-3/"/>
+    <updated>2017-09-03T10:56:18+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-3</id>
+    <content type="html"><![CDATA[<p>Now we have a jailbroken phone with dev tools installed, it&rsquo;s time to start playing with apps. We&rsquo;ll start by debugging a running stock app using <code>lldb</code>.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 3 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li>Part 3: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Debugging apps with <code>lldb</code></h3>
+
+<p>Start the Calculator app on the device, then<code>ssh</code> into the device (as <code>root</code>). Find the process ID (&ldquo;pid&rdquo;) of the running Calculator app.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>JB-phone:~ root# ps ax | grep -i calculator
+</span><span class='line'>717   ??  Ss     0:00.31 /Applications/Calculator.app/Calculator
+</span><span class='line'>719 s000  R+     0:00.01 grep -i calculator</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So the <em>pid</em> is 717. Yours will probably be different.</p>
+
+<p>Start <code>debugserver</code> on the device, and attach it to the Calculator process by using its <em>pid</em>. I&rsquo;ve used port 1234, but it could be anything greater than 1024:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>JB-phone:~ root# ./debugserver *:1234 --attach=717
+</span><span class='line'>debugserver-@(#)PROGRAM:debugserver  PROJECT:debugserver-360.0.26.1
+</span><span class='line'> for arm64.
+</span><span class='line'>Attaching to process 717...
+</span><span class='line'>Listening to port 1234 for a connection from *...</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The debugger is attached to the Calculator process, now let&rsquo;s attach <code>lldb</code> to it <em>from your Mac</em>:</p>
+
+<ul>
+<li>start <code>lldb</code> on your Mac</li>
+<li><code>platform select remote-ios</code></li>
+<li><code>process connect connect://192.168.1.20:1234</code>
+
+<ul>
+<li>where this is the IP address of the device, and the <code>debugserver</code> port</li>
+</ul>
+</li>
+</ul>
+
+
+<p>The output looks like this:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Mac:~ matthew$ lldb
+</span><span class='line'>(lldb) platform select remote-ios
+</span><span class='line'>  Platform: remote-ios
+</span><span class='line'> Connected: no
+</span><span class='line'>  SDK Path: "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+</span><span class='line'> SDK Roots: [ 0] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.1.1 (14B100)"
+</span><span class='line'> SDK Roots: [ 1] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2 (14C92)"
+</span><span class='line'> SDK Roots: [ 2] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.2.1 (14D27)"
+</span><span class='line'> SDK Roots: [ 3] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/10.3.2 (14F89)"
+</span><span class='line'> SDK Roots: [ 4] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5318g)"
+</span><span class='line'> SDK Roots: [ 5] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5327g)"
+</span><span class='line'> SDK Roots: [ 6] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5341f)"
+</span><span class='line'> SDK Roots: [ 7] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5362a)"
+</span><span class='line'> SDK Roots: [ 8] "/Users/matthew/Library/Developer/Xcode/iOS DeviceSupport/11.0 (15A5368a)"
+</span><span class='line'>(lldb) process connect connect://192.168.1.20:1234
+</span><span class='line'>Process 717 stopped
+</span><span class='line'>* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+</span><span class='line'>    frame #0: 0x0000000185a4816c libsystem_kernel.dylib`mach_msg_trap + 8
+</span><span class='line'>libsystem_kernel.dylib`mach_msg_trap:
+</span><span class='line'>-&gt;  0x185a4816c &lt;+8&gt;: ret    
+</span><span class='line'>
+</span><span class='line'>libsystem_kernel.dylib`mach_msg_overwrite_trap:
+</span><span class='line'>    0x185a48170 &lt;+0&gt;: mov    x16, #-0x20
+</span><span class='line'>    0x185a48174 &lt;+4&gt;: svc    #0x80
+</span><span class='line'>    0x185a48178 &lt;+8&gt;: ret    
+</span><span class='line'>(lldb)  </span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice that <code>lldb</code> says the process has been stopped. It really means &ldquo;suspended&rdquo;, as if it were at a breakpoint. Tap buttons on the Calculator app - they won&rsquo;t work, proving that the app is paused.</p>
+
+<p>We can unpause the app by issuing the <code>continue</code> command to <code>lldb</code>:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>(lldb) continue
+</span><span class='line'>Process 717 resuming
+</span><span class='line'>(lldb) </span></code></pre></td></tr></table></div></figure>
+
+
+<p>&hellip; and you&rsquo;ll see the app has resumed, and buttons work once more.</p>
+
+<p>If you want to continue using <code>lldb</code>, then do so - there&rsquo;s a ton of information on <a href="http://lldb.llvm.org">the lldb homepage</a>. In the next instalment, we&rsquo;ll switch tools and use Jay Freeman&rsquo;s <code>Cycript</code> to play with this app some more.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 2)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-2/"/>
+    <updated>2017-09-02T12:12:00+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-2</id>
+    <content type="html"><![CDATA[<p>In this second part of the &ldquo;hacking iOS apps&rdquo; series, we&rsquo;ll perform some post-jailbreak steps - ready for remote-debugging apps on a jailbroken device.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 2 of a multi-part series:</p>
+
+<ul>
+<li><a href="http://daringsnowball.net/ios-hacking-1/">Part 1</a>: obtaining and jailbreaking a device</li>
+<li>Part 2: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Recap</h3>
+
+<p>In the <a href="http://daringsnowball.net/ios-hacking-1/">first part of this series</a>, we acquired and jailbroke an iOS device. In part 2, we&rsquo;ll perform some updates and install necessary tools onto the device.</p>
+
+<p>Remember that you may need to re-jailbreak your device every time it boots from cold.</p>
+
+<h3>Cydia updates</h3>
+
+<p>When you start Cydia for the first time, you&rsquo;ll probably be prompted to perform an <em>Essential Upgrade</em>. I&rsquo;d go for the &ldquo;Complete Upgrade&rdquo;; Cydia will kill itself when this is complete.</p>
+
+<p>Next, we&rsquo;ll access the device over <em>ssh</em>.</p>
+
+<h3>ssh access over WiFi</h3>
+
+<p>The yalu jailbreak already includes the <a href="https://matt.ucc.asn.au/dropbear/dropbear.html">Dropbear</a> ssh server, so no need to install <em>OpenSSH</em>. By default, the server is only enabled over USB - so we&rsquo;ll need to change the config to allow this over WiFi.</p>
+
+<ul>
+<li>use Cydia to install &ldquo;Filza File Manager&rdquo; app</li>
+<li>open Filza, and find &ldquo;/private/var/containers/Bundle/Application/yalu102/yalu102.app/dropbear.plist&rdquo;</li>
+<li>use the (i) button to change &ldquo;OPen with&rdquo; to &ldquo;Text Editor&rdquo;, then tap &ldquo;dropbear.plist&rdquo; to edit it</li>
+<li>find <code>127.0.0.1:22</code> and replace it with <code>22</code> (this binds the dropbear ssh daemon to all network interfaces, instead of the default which just uses loopback)</li>
+<li>reboot the device (and re-jailbreak if necessary)</li>
+<li>you should be able to ssh to the device
+
+<ul>
+<li><code>ssh root@{ip-address}</code></li>
+<li>password <code>alpine</code></li>
+</ul>
+</li>
+<li>now&rsquo;s a great time to change the root password
+
+<ul>
+<li><code>passwd</code></li>
+</ul>
+</li>
+<li>and also change the password for the user &ldquo;mobile&rdquo;, which is used for running most apps
+
+<ul>
+<li><code>passwd mobile</code></li>
+</ul>
+</li>
+</ul>
+
+
+<h3>debugserver</h3>
+
+<p>In order to debug applications running on the device, we&rsquo;ll to install need the <code>debugserver</code> tool. You&rsquo;ll need Xcode intalled on your Mac to do this.</p>
+
+<p>First, take a look inside <code>/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/</code> - you&rsquo;ll see folders for different versions of iOS. Inside each folder is a <code>dmg</code> file (disk archive). Open the correct one for your version of iOS:</p>
+
+<p><code>hdiutil attach /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/10.1/DeveloperDiskImage.dmg</code></p>
+
+<p>Then copy the <code>debugserver</code> binary somewhere:</p>
+
+<p><code>cp /Volumes/DeveloperDiskImage/usr/bin/debugserver ./</code></p>
+
+<p>Create a file called <code>entitlements.plist</code>:</p>
+
+<p><code>cat &gt; entitlements.plist</code></p>
+
+<p>&hellip; and paste in this content:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+</span><span class='line'>&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/ PropertyList-1.0.dtd"&gt;
+</span><span class='line'>&lt;plist version="1.0"&gt;
+</span><span class='line'>&lt;dict&gt;
+</span><span class='line'>    &lt;key&gt;com.apple.springboard.debugapplications&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;run-unsigned-code&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;get-task-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>    &lt;key&gt;task_for_pid-allow&lt;/key&gt; &lt;true/&gt;
+</span><span class='line'>&lt;/dict&gt; 
+</span><span class='line'>&lt;/plist&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then close the file by pressing ^D (Control-D). Now re-sign <code>debugserver</code> with this new entitlements file:</p>
+
+<p><code>codesign -s - --entitlements entitlements.plist -f debugserver</code></p>
+
+<p>Finally, copy this re-signed <code>debugserver</code> binary to the device:</p>
+
+<p><code>tar -czf - ./debugserver | ssh root@192.168.1.20 'tar -xzf - -C /var/root/'</code></p>
+
+<p>Next time: we&rsquo;ll debug a running app, and make some runtime changes.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to hacking iOS apps (part 1)]]></title>
+    <link href="http://daringsnowball.net/ios-hacking-1/"/>
+    <updated>2017-09-02T09:30:56+01:00</updated>
+    <id>http://daringsnowball.net/introduction-to-hacking-ios-apps-part-1</id>
+    <content type="html"><![CDATA[<p>There are several steps to hacking iOS apps, and I aim to cover them over a series of blog posts.</p>
+
+<ol>
+<li>Acquiring and jailbreaking an iOS device</li>
+<li>Installing necessary tools</li>
+<li>Analysing third-party apps</li>
+<li>Changing functionality</li>
+</ol>
+
+
+<p>In this first post, we&rsquo;ll acquire and jailbreak an iOS device.</p>
+
+<!-- more -->
+
+
+<blockquote><p>This is part 1 of a multi-part series:</p>
+
+<ul>
+<li>Part 1: obtaining and jailbreaking a device</li>
+<li><a href="http://daringsnowball.net/ios-hacking-2/">Part 2</a>: post-jailbreak stuff</li>
+<li><a href="http://daringsnowball.net/ios-hacking-3/">Part 3</a>: debugging apps with lldb</li>
+<li><a href="http://daringsnowball.net/ios-hacking-4/">Part 4</a>: altering apps at runtime with Cycript</li>
+<li><a href="http://daringsnowball.net/ios-hacking-5/">Part 5</a>: instrumentation and code-injection with Frida</li>
+</ul>
+</blockquote>
+
+<h3>Acquiring a suitable iOS device</h3>
+
+<p>First, some warnings:</p>
+
+<ul>
+<li>Don&rsquo;t do this on your primary iOS device - get a separate device to jailbreak</li>
+<li>Don&rsquo;t put personal stuff on this jailbroken device. That means:
+
+<ul>
+<li>Keep this device away from your email accounts</li>
+<li>Turn off iCloud syncing, iMessage, Facetime, etc</li>
+<li>Don&rsquo;t access your bank accounts, PayPal, etc from this device</li>
+<li>Ideally, use a separate Apple account for this device</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Finding a suitable device isn&rsquo;t easy. Latest versions of iOS (10.3.3 at the time of writing) cannot be jailbroken, and devices cannot (usually) be reverted to a previous version of iOS. So you&rsquo;ll need to buy a device which is already running an old version of iOS.</p>
+
+<p><a href="https://www.theiphonewiki.com/wiki/Jailbreak" title="the iPhone wiki">the iPhone wiki</a> has a handly list of jailbreakable devices and iOS versions.</p>
+
+<p>There are two places where I&rsquo;d look to find a device for jailbreaking: eBay and high-street <em>cash converter</em> shops.</p>
+
+<h3>Buying a device on eBay</h3>
+
+<p>This is the cheaper option, but you need patience to find the right device. Most sellers will update the device to the latest version of iOS before listing the item on eBay. You can learn a lot from the photos attached to the listing.</p>
+
+<p><strong>Best case scenario</strong>: there&rsquo;s a photo of the <em>About</em> screen, because some sellers think that buyers like to see the device&rsquo;s IMEI. On that screen you can also see the iOS version</p>
+
+<p><strong>Not-so-good scenario</strong>: there are no photos of the device powered-on - you&rsquo;ll need to message the seller to ask them which version it&rsquo;s running. Don&rsquo;t expect to get a good reply - sellers often don&rsquo;t know, or they might guess</p>
+
+<p><strong>Worst-case scenario</strong>: the phone has been factory-reset (photos show the initial iOS <em>Hello</em> screen). In this case, it&rsquo;s not easy for the seller to check the iOS version</p>
+
+<h3>Buying a device at &ldquo;cash converters&rdquo;</h3>
+
+<p>You know <em>cash converters</em> - they&rsquo;re everywhere. Shop-windows full of pre-owned phones and tablets; bins inside the shop containing used DVDs and emoji-poop cushions.</p>
+
+<p>These are better than eBay for many reasons: you can handle the devices and check them for yourself, and they are less likely to be updated to the latest version of iOS. If you speak nicely to the manager, they might check all the phones for you, if they think they&rsquo;ll get an easy sale. Explain that you don&rsquo;t care about dents, scratches and carrier-locks. The only down-side is devices here will be slightly more expensive than on eBay.</p>
+
+<p>I bought a 16Gb iPhone 5s from a high-street store, running iOS 10.1.1.</p>
+
+<h3>Preparing for jailbreak</h3>
+
+<p>First, you&rsquo;ll need to take precautions against automatic iOS updates. If the latest version of iOS is automatically installed, your jailbreak is toast. So I fill the device with empty videos:</p>
+
+<ul>
+<li>disable iCloud Photo Libaray (otherwise the device will try to free space by uploading these images to iCloud - but <em>we want</em> the device to be almost full)</li>
+<li>open the camera app and record a 10-minute video</li>
+<li>open the photos app and duplicate this video multiple times, until your device has less than 700 MB free memory</li>
+<li>this means that the device won&rsquo;t have enough space to download iOS updates
+
+<ul>
+<li>to check: go to the <em>General -> Software Updates</em> part of the <em>Settings</em> app</li>
+<li>you should see the message <em>&ldquo;This update cannot be installed because it requires at least XXX MB of available storage&rdquo;</em>.</li>
+</ul>
+</li>
+<li>you&rsquo;ll need to keep an eye on the available storage - duplicating videos to intentionally use space, deleting videos to free up a little space</li>
+<li>each copy of the 10-minute video is around 150 MB on my device</li>
+</ul>
+
+
+<h3>Perform jailbreak</h3>
+
+<p>Next go back to <a href="https://www.theiphonewiki.com/wiki/Jailbreak" title="the iPhone wiki">the iPhone wiki</a> to check which jailbreak to use for your device. For my iOS 10.1.1 iPhone 5s I&rsquo;ll use <a href="https://yalu.qwertyoruiop.com" title="yalu102 beta 7">yalu 102 beta 7</a>, installed with Jay Freeman&rsquo;s <a href="http://www.cydiaimpactor.com" title="Cydia Impactor">Cydia Impactor</a>.</p>
+
+<ul>
+<li>download yalu102 and Cydia Impactor</li>
+<li>install Cydia Impactor</li>
+<li>attach your device</li>
+<li>run Cydia Impactor and make sure the device is selected in the top selectbox</li>
+<li>drag the yalu IPA to Cydia Impactor</li>
+<li>enter your Apple Developer credentials (you may need a application-specific password if you use 2FA - which you should be doing)</li>
+<li>yalu102 will be signed with your developer signing identity, and installed on the device</li>
+<li>launch yalu102 app on the device</li>
+<li>press <strong>go</strong></li>
+<li>device will restart</li>
+<li>when it has restarted, you&rsquo;ll find the Cydia app installed too</li>
+<li>since this is a semi-untethered jailbreak tool, you&rsquo;ll need to run yalu102 to re-jailbreak every time the device boots</li>
+</ul>
+
+
+<p>That&rsquo;s enough for this post. In <a href="http://daringsnowball.net/ios-hacking-2/">the next post</a>, we&rsquo;ll install some necessary tools onto the device.</p>
+]]></content>
+  </entry>
+  
+</feed>
