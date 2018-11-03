@@ -4,7 +4,7 @@
   <title><![CDATA[Category: nearlydeparted | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/nearlydeparted/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2017-12-24T00:48:57+00:00</updated>
+  <updated>2018-11-03T10:48:07+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -27,9 +27,9 @@
 
 <ul>
 <li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
-<li>Part 2: tech background</li>
+<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
 <li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
-<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
+<li>Part 4: storage and sync</li>
 </ul>
 </blockquote>
 

@@ -1,0 +1,110 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Enums are meant for switching  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="I&rsquo;m rewriting Nearly Departed, and working on a large iOS project in my day-job. While working on both of those projects, I&rsquo;ve started to &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Enums Are Meant for Switching</h2>
+	<div class="entry-content"><p>I&rsquo;m rewriting <em>Nearly Departed</em>, and working on a large iOS project in my day-job. While working on both of those projects, I&rsquo;ve started to rely on two unofficial rules for enumerations:</p>
+
+<ol>
+<li>Enumeration values should always be checked with <code>switch</code>, not <code>if</code></li>
+<li><code>default:</code> cases in <code>switch</code> statements are bad</li>
+</ol>
+
+
+<!-- more -->
+
+
+<p>My reason for this is that <code>switch</code> statements without <code>default:</code> cases make the intent of the code explicit; we can be sure when reading code that the developer has properly considered every case.</p>
+
+<p><em>As an extra bonus</em>, you&rsquo;ll now get a compile-time warning (or error, if &ldquo;treat warnings as errors&rdquo; is enabled) if more cases are ever added to the enumeration. This isn&rsquo;t as uncommon as you might think - Apple added a new case <code>.provisional</code> to the <code>UNAuthorizationStatus</code> enumeration in the iOS 12 SDK.</p>
+
+<p>It&rsquo;s too early to have seen any real benefits from doing this (other than annoyed colleagues after I&rsquo;ve reviewed their pull requests) but I&rsquo;m <em>sure</em> we&rsquo;ll be glad of it sometime in the future.</p>
+
+<h3>Exceptions to these rules</h3>
+
+<p>In unit-test code, I wouldn&rsquo;t insist on <code>switch</code>ing over an enumeration. It&rsquo;s quite valid to do this when asserting the result of some operation:</p>
+
+<pre><code>guard case let MyEnumeration.firstCase(myValue) = someResult else {
+    XCTFail("Expected a 'firstCase' but got \(someResult) instead")
+    return
+}
+
+XCTAssertEqual(myValue, "expected value")
+</code></pre>
+
+<h3>Extra bonus half-rule with no explanation</h3>
+
+<p>An enumeration with more than ten values is a code-smell.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2018-11-03T09:00:16+00:00" pubdate data-updated="true">Nov 3rd, 2018</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/best-practices/'>best practices</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>
