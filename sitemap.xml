@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
+<loc>http://daringsnowball.net/enums-are-meant-for-switching/</loc>
+<lastmod>2018-11-03T09:00:16+00:00</lastmod>
+</url>
+<url>
 <loc>http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/</loc>
 <lastmod>2017-12-23T22:16:29+00:00</lastmod>
 </url>
@@ -62,5 +66,8 @@
 </url>
 <url>
 <loc>http://daringsnowball.net/blog/categories/nearlydeparted/</loc>
+</url>
+<url>
+<loc>http://daringsnowball.net/blog/categories/best-practices/</loc>
 </url>
 </urlset>

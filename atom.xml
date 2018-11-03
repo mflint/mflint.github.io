@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-07-16T06:47:51+01:00</updated>
+  <updated>2018-11-03T10:48:07+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,46 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Enums are meant for switching]]></title>
+    <link href="http://daringsnowball.net/enums-are-meant-for-switching/"/>
+    <updated>2018-11-03T09:00:16+00:00</updated>
+    <id>http://daringsnowball.net/enums-are-meant-for-switching</id>
+    <content type="html"><![CDATA[<p>I&rsquo;m rewriting <em>Nearly Departed</em>, and working on a large iOS project in my day-job. While working on both of those projects, I&rsquo;ve started to rely on two unofficial rules for enumerations:</p>
+
+<ol>
+<li>Enumeration values should always be checked with <code>switch</code>, not <code>if</code></li>
+<li><code>default:</code> cases in <code>switch</code> statements are bad</li>
+</ol>
+
+
+<!-- more -->
+
+
+<p>My reason for this is that <code>switch</code> statements without <code>default:</code> cases make the intent of the code explicit; we can be sure when reading code that the developer has properly considered every case.</p>
+
+<p><em>As an extra bonus</em>, you&rsquo;ll now get a compile-time warning (or error, if &ldquo;treat warnings as errors&rdquo; is enabled) if more cases are ever added to the enumeration. This isn&rsquo;t as uncommon as you might think - Apple added a new case <code>.provisional</code> to the <code>UNAuthorizationStatus</code> enumeration in the iOS 12 SDK.</p>
+
+<p>It&rsquo;s too early to have seen any real benefits from doing this (other than annoyed colleagues after I&rsquo;ve reviewed their pull requests) but I&rsquo;m <em>sure</em> we&rsquo;ll be glad of it sometime in the future.</p>
+
+<h3>Exceptions to these rules</h3>
+
+<p>In unit-test code, I wouldn&rsquo;t insist on <code>switch</code>ing over an enumeration. It&rsquo;s quite valid to do this when asserting the result of some operation:</p>
+
+<pre><code>guard case let MyEnumeration.firstCase(myValue) = someResult else {
+    XCTFail("Expected a 'firstCase' but got \(someResult) instead")
+    return
+}
+
+XCTAssertEqual(myValue, "expected value")
+</code></pre>
+
+<h3>Extra bonus half-rule with no explanation</h3>
+
+<p>An enumeration with more than ten values is a code-smell.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rewriting Nearly Departed (part 4: storage and sync)]]></title>
