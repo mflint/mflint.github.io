@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-11-03T10:52:09+00:00</updated>
+  <updated>2018-11-23T12:06:33+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Handling widgetPerformUpdate in an iOS Today extension]]></title>
+    <link href="http://daringsnowball.net/handling-widgetperformupdate-in-an-ios-today-extension/"/>
+    <updated>2018-11-10T12:59:02+00:00</updated>
+    <id>http://daringsnowball.net/handling-widgetperformupdate-in-an-ios-today-extension</id>
+    <content type="html"><![CDATA[<p>Apple&rsquo;s documentation about the <code>NCWidgetProviding</code> protocol, and <code>widgetPerformUpdate:</code> function in particular are rather sparse, and most posts on StackOverflow seem to have a very simplistic view about how this callback should be coded. So here are my tips.</p>
+
+<!-- more -->
+
+
+<p>Most examples you&rsquo;ll see for <code>widgetPerformUpdate:</code> look rather like this:</p>
+
+<pre><code>func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -&gt; Void)) {
+    let resultModel = performExpensiveNetworkOperation()
+    label.text = resultModel.someValue
+    completionHandler(NCUpdateResult.newData)
+}
+</code></pre>
+
+<p>&hellip; which would probably be OK, most of the time, but there are very few examples of expensive work being done asynchronously.</p>
+
+<p>There are, however, three <em>big</em> hints that this is the right thing to do:</p>
+
+<ol>
+<li>Apple&rsquo;s documentation says <em>&ldquo;It&rsquo;s expected that the widget will perform the work to update asynchronously and off the main thread as much as possible&rdquo;</em>. (The <code>widgetPerformUpdate:</code> call does indeed arrive on the main thread)</li>
+<li>the <code>completionHandler</code> block is annotated <code>@escaping</code>, implying that it will outlive the scope of the <code>widgetPerformUpdate:</code> function itself</li>
+<li>the function returns <code>Void</code>; if this were intended to be a <em>blocking</em> call, then the func would simply have an <code>NCUpdateResult</code> return value instead of providing a completion block</li>
+</ol>
+
+
+<h3>Doing it right</h3>
+
+<p>The correct way to do this depends on whether your long-running operation is synchronous (blocking), or asychronous with a completion block, or asynchronous with a delegate. Here are examples of all three.</p>
+
+<h4>Performing a synchronous (blocking) operation</h4>
+
+<pre><code>class SynchronousCallExampleViewController: UIViewController, NCWidgetProviding {
+    private let dataSource = DataSource()
+    private var data: Data?
+
+    private func updateUI() {
+        DispatchQueue.main.async {
+            // update UI components
+        }
+    }
+
+    func widgetPerformUpdate(completionHandler: @escaping (NCUpdateResult) -&gt; Void) {
+        DispatchQueue.global().async {
+            // fetch data on a background thread
+            self.data = self.dataSource.fetchData()
+            self.updateUI()
+            completionHandler(.newData)
+        }
+    }
+}
+</code></pre>
+
+<h4>Performing an asynchronous operation with a completion block</h4>
+
+<pre><code>class AsynchronousCallWithCompletionBlockExampleViewController: UIViewController, NCWidgetProviding {
+    private let dataSource = DataSource()
+    private var data: Data?
+
+    private func updateUI() {
+        DispatchQueue.main.async {
+            // update UI components
+        }
+    }
+
+    func widgetPerformUpdate(completionHandler: @escaping (NCUpdateResult) -&gt; Void) {
+        DispatchQueue.global().async {
+            // fetch data on a background thread
+            self.dataSource.fetchDataAsync({ [weak self] (data) in
+                guard let self = self else { return }
+
+                self.data = data
+                self.updateUI()
+                completionHandler(.newData)
+            })
+        }
+    }
+}
+</code></pre>
+
+<h4>Performing an asynchronous operation with a delegate callback</h4>
+
+<pre><code>class AsynchronousCallWithDelegateExampleViewController: UIViewController, NCWidgetProviding, DataSourceDelegate {
+    private var dataSource = DataSource()
+    private var widgetCompletionHandler: ((NCUpdateResult) -&gt; Void)?
+    private var data: Data?
+
+    private func updateUI() {
+        DispatchQueue.main.async {
+            // update UI components
+        }
+    }
+
+    func widgetPerformUpdate(completionHandler: @escaping (NCUpdateResult) -&gt; Void) {
+        widgetCompletionHandler = completionHandler
+
+        dataSource.delegate = self
+        DispatchQueue.global().async {
+            // fetch data on a background thread
+            self.dataSource.fetchDataAsync()
+        }
+    }
+
+    func dataDidUpdate(dataSource: DataSource) {
+        data = dataSource.data
+        updateUI()
+
+        if let completionHandler = widgetCompletionHandler {
+            completionHandler(.newData)
+            widgetCompletionHandler = nil
+        }
+    }
+}
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Enums are meant for switching]]></title>
