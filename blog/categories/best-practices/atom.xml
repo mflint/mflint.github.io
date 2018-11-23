@@ -4,7 +4,7 @@
   <title><![CDATA[Category: best practices | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/best-practices/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-11-23T13:25:05+00:00</updated>
+  <updated>2018-11-23T14:22:47+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -318,7 +318,7 @@ label.text = viewModel.departureDescription()
 
 <p>My reason for this is that <code>switch</code> statements without <code>default:</code> cases make the intent of the code explicit; we can be sure when reading code that the developer has properly considered every case.</p>
 
-<p><em>As an extra bonus</em>, you&rsquo;ll now get a compile-time warning (or error, if &ldquo;treat warnings as errors&rdquo; is enabled) if more cases are ever added to the enumeration. This isn&rsquo;t as uncommon as you might think - Apple added a new case <code>.provisional</code> to the <code>UNAuthorizationStatus</code> enumeration in the iOS 12 SDK.</p>
+<p><em>As an extra bonus</em>, you&rsquo;ll now get a compile-time error if more cases are ever added to the enumeration. This isn&rsquo;t as uncommon as you might think - Apple added a new case <code>.provisional</code> to the <code>UNAuthorizationStatus</code> enumeration in the iOS 12 SDK.</p>
 
 <p>It&rsquo;s too early to have seen any real benefits from doing this (other than annoyed colleagues after I&rsquo;ve reviewed their pull requests) but I&rsquo;m <em>sure</em> we&rsquo;ll be glad of it sometime in the future.</p>
 
