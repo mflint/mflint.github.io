@@ -4,7 +4,7 @@
   <title><![CDATA[Category: best practices | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/best-practices/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-11-23T12:06:33+00:00</updated>
+  <updated>2018-11-23T13:24:04+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,172 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Swift Extensions for Protocol Conformance Considered Harmful]]></title>
+    <link href="http://daringsnowball.net/swift-extensions-for-protocol-conformance-considered-harmful/"/>
+    <updated>2018-11-23T12:11:43+00:00</updated>
+    <id>http://daringsnowball.net/swift-extensions-for-protocol-conformance-considered-harmful</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve come to the conclusion that using Swift extensions to make types conform to protocols is rather an anti-pattern. Let me explain why.</p>
+
+<!-- more -->
+
+
+<h3>How extensions can be useful</h3>
+
+<p>Swift type extensions are amazing for adding extra functionality to existing types if the following two conditions are true:</p>
+
+<ol>
+<li>you don&rsquo;t own the type</li>
+<li>you could reasonably argue that the functionality is <em>missing</em> from that type</li>
+</ol>
+
+
+<p>Example: if we wanted to url-encode a string (<code>Hello world</code> would become <code>Hello%20World</code>), we might do this by extending the <code>String</code> type:</p>
+
+<pre><code>extension String {
+    func urlEncode() -&gt; String {
+        // implementation here
+    }
+}
+</code></pre>
+
+<p>However, if you already own the type, then I&rsquo;d argue that you should simply add the new functionality to the type itself.</p>
+
+<p>Also, if your new functionality is <em>very specific to the app you&rsquo;re writing</em>, then an extension probably isn&rsquo;t appropriate. Example: your app has a set of railway stations which can be identified by a string &lsquo;reference code&rsquo;. You might consider adding an extension like this, to get the model for a given code:</p>
+
+<pre><code>// don't do this
+extension String {
+    func stationModel() -&gt; StationModel {
+        // implementation here
+    }
+}
+
+let aslocktonStation = "ALK".stationModel()
+</code></pre>
+
+<p>No, don&rsquo;t do that. A Swift <code>String</code> doesn&rsquo;t care about your app.</p>
+
+<h3>Three main problems with extensions for protocol conformance</h3>
+
+<p>However I do object to using extensions for protocol conformance:</p>
+
+<ol>
+<li>extensions alter the <em>public interface</em> for the extended type, which breaks encapsulation (exposing the internal workings of that type), and is ripe for abuse by future lazy devs</li>
+<li>it&rsquo;s really easy to lose code when relying on extensions everywhere</li>
+<li>type-safety can be damaged</li>
+</ol>
+
+
+<h3>Public interface changes</h3>
+
+<p>Here&rsquo;s an example of a class which is interested in receiving messages from a paired WatchKit app:</p>
+
+<pre><code>extension ViewController: WCSessionDelegate {
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        self.myData = self.parse(incomingMessage: message)
+        self.updateUI()
+    }
+}
+</code></pre>
+
+<p>This will work OK, but now <code>WCSessionDelegate</code> is part of the public interface of this <code>ViewController</code> class. Our ViewController&rsquo;s WatchKit dependency is now there for everyone to see (and possibly abuse).</p>
+
+<p>Somebody, eventually, will be tempted call these delegate functions directly:</p>
+
+<pre><code>let session: WCSession? = nil
+myViewController.session(session!, didReceiveMessage: ["foo": "bar"])
+</code></pre>
+
+<p>A nicer alternative solution, which was common in my Java days, would be to make a private internal type which conforms to the delegate protocol:</p>
+
+<pre><code>class ViewController: UIViewController {
+    private class MessageHandler: NSObject, WCSessionDelegate {
+        private weak var viewController: ViewController?
+
+        init(viewController: ViewController) {
+            self.viewController = viewController
+        }
+
+        func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+            viewController.accept(message)
+        }
+    }
+
+    private var messageHandler: MessageHandler?
+
+    override func viewDidLoad() {
+        messageHandler = MessageHandler(viewController: self)
+        watchSession.delegate = messageHandler
+    }
+
+    private func accept(_ incomingMessage: [String : Any]) {
+        myData = parse(incomingMessage: message)
+        updateUI()
+    }
+}
+</code></pre>
+
+<p>With this solution, the WatchKit dependency is hidden and the delegate functions aren&rsquo;t exposed in the public interface for the class.</p>
+
+<h3>Losing code in extensions</h3>
+
+<p>I&rsquo;m a firm believer in having one unambiguous place to put a piece of code, and that code should be easy to find. Unfortunately, when using extensions for protocol conformance, code can get lost.</p>
+
+<p>In my <em>Nearly Departed</em> app rewrite, I have sets of <code>Model</code> objects which contain data received from an API, and some <code>ViewModel</code> protocols which format that data for presentation on-screen.</p>
+
+<p>Simplified example:</p>
+
+<pre><code>struct DepartureModel {
+    var destination: String
+    var departureTime: String
+}
+
+protocol DepartureViewModel {
+    func departureDescription() -&gt; String
+}
+
+extension DepartureModel: DepartureViewModel {
+    func departureDescription() -&gt; String {
+        return "\(departureTime) to \(destination)"
+    }
+}
+</code></pre>
+
+<p>So the <code>departureDescription()</code> func might return something like &ldquo;18:05 to Nottingham&rdquo;.</p>
+
+<p>This felt like a fabulous idea, which I embraced - but now I struggle to find those extensions. (Admittedly this is made more difficult because I have targets for an iOS app, a Today extension and a WatchKit extension)</p>
+
+<p>It&rsquo;s so difficult to use that I&rsquo;m starting to rewrite these parts with a separate concrete <code>DepartureViewModel</code> class, which holds a reference to the <code>DepartureModel</code>:</p>
+
+<pre><code>struct DepartureViewModel {
+    let departure: DepartureModel
+
+    func departureDescription() -&gt; String {
+        return "\(departure.departureTime) to \(departure.destination)"
+    }
+}
+</code></pre>
+
+<p>Yes, preferring composition over interitance is still just as relevant in 2018 - and conformance-via-extensions feels similar to &ldquo;inheritance&rdquo; to me.</p>
+
+<h3>Type-safety implications</h3>
+
+<p>I found that I was writing code like this:</p>
+
+<pre><code>guard let viewModel = model as? DepartureViewModel else {
+    // ooh crikey, what now?
+    preconditionFailure()
+}
+
+label.text = viewModel.departureDescription()
+</code></pre>
+
+<p>Not. Pretty. At. All.</p>
+
+<p>I&rsquo;d favour compile-time failures over runtime crashes every time.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Handling widgetPerformUpdate in an iOS Today extension]]></title>
