@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-11-23T14:22:47+00:00</updated>
+  <updated>2018-12-02T23:17:55+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Accessing Swift Arrays Without Counting on Fingers]]></title>
+    <link href="http://daringsnowball.net/accessing-swift-arrays-without-counting-on-fingers/"/>
+    <updated>2018-12-02T22:59:43+00:00</updated>
+    <id>http://daringsnowball.net/accessing-swift-arrays-without-counting-on-fingers</id>
+    <content type="html"><![CDATA[<p>I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check.</p>
+
+<p>It goes something like this:</p>
+
+<ul>
+<li>I imagine I have an array containing four elements</li>
+<li>I hold up four fingers</li>
+<li>I count &ldquo;zero, one, two, three&rdquo;, then think &ldquo;so if I ask for index four, it will break, so I need to range-check&hellip;&rdquo;</li>
+</ul>
+
+
+<p>OMG, 35 years. I&rsquo;ve probably done this thousands of times, and the range-check rules still won&rsquo;t stick in my brain.</p>
+
+<p>But here&rsquo;s a sneaky way to avoid that range-checking code, and I&rsquo;m not ashamed to say that I use this extension for real.</p>
+
+<!-- more -->
+
+
+<h3>An Array Extension</h3>
+
+<p>This is simply an Array extension which returns <code>nil</code> if the index doesn&rsquo;t exist. My reasoning is this: it&rsquo;s easier (for me) to write <code>if let</code> or <code>guard let</code> rather than counting on my fingers, and it saves me from coding stupid off-by-one errors.</p>
+
+<pre><code>extension Array {
+    func element(at index: Int) -&gt; Element? {
+        return index &lt; self.count ? self[index] : nil
+    }
+}
+</code></pre>
+
+<p>And I use it like this:</p>
+
+<pre><code>if let fifthElement = myArray.element(at: 4) {
+    // do something
+}
+</code></pre>
+
+<p>Or like this:</p>
+
+<pre><code>guard let fifthElement = myArray.element(at: 4) else {
+    // not there
+    return
+}
+
+// do something
+</code></pre>
+
+<p>Result: I do the &ldquo;count on fingers&rdquo; thing once per Swift project, when coding this extension, instead of several times per day.</p>
+
+<p>I wonder if something like this would ever be added to the standard library?</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Swift Extensions for Protocol Conformance Considered Harmful]]></title>

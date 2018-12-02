@@ -7,7 +7,7 @@
 
 	<meta name="author" content="Matthew Flint"> 
 	
-	<meta name="description" content="I&rsquo;ve come to the conclusion that using Swift extensions to make types conform to protocols is rather an anti-pattern. Let me explain why. Read &hellip;"> <meta name="keywords" content="">
+	<meta name="description" content="I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check. It &hellip;"> <meta name="keywords" content="">
 
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -36,6 +36,63 @@
 </header>
 
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/accessing-swift-arrays-without-counting-on-fingers/">
+		
+			Accessing Swift Arrays Without Counting on Fingers</a>
+	</h2>
+	<div class="entry-content">
+		<p>I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check.</p>
+
+<p>It goes something like this:</p>
+
+<ul>
+<li>I imagine I have an array containing four elements</li>
+<li>I hold up four fingers</li>
+<li>I count &ldquo;zero, one, two, three&rdquo;, then think &ldquo;so if I ask for index four, it will break, so I need to range-check&hellip;&rdquo;</li>
+</ul>
+
+
+<p>OMG, 35 years. I&rsquo;ve probably done this thousands of times, and the range-check rules still won&rsquo;t stick in my brain.</p>
+
+<p>But here&rsquo;s a sneaky way to avoid that range-checking code, and I&rsquo;m not ashamed to say that I use this extension for real.</p>
+
+
+		
+		<a href="/accessing-swift-arrays-without-counting-on-fingers/" class="more-link">Read more</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2018-12-02T22:59:43+00:00" pubdate data-updated="true">Dec 2nd, 2018</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
 
 
     <article class="post">
@@ -444,50 +501,6 @@
 
 
 <time datetime="2017-09-03T11:58:24+01:00" pubdate data-updated="true">Sep 3rd, 2017</time></div>
-	
-
-<div class="tags">
-
-	<a class='category' href='/blog/categories/hacking/'>hacking</a>, <a class='category' href='/blog/categories/jailbreaking/'>jailbreaking</a>
-
-</div>
-
-
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/ios-hacking-3/">
-		
-			Introduction to Hacking iOS Apps (Part 3)</a>
-	</h2>
-	<div class="entry-content">
-		<p>Now we have a jailbroken phone with dev tools installed, it&rsquo;s time to start playing with apps. We&rsquo;ll start by debugging a running stock app using <code>lldb</code>.</p>
-
-
-		
-		<a href="/ios-hacking-3/" class="more-link">Read more</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-
-<time datetime="2017-09-03T10:56:18+01:00" pubdate data-updated="true">Sep 3rd, 2017</time></div>
 	
 
 <div class="tags">

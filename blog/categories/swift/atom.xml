@@ -4,7 +4,7 @@
   <title><![CDATA[Category: swift | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/swift/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-11-23T14:22:47+00:00</updated>
+  <updated>2018-12-02T23:17:55+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Accessing Swift Arrays Without Counting on Fingers]]></title>
+    <link href="http://daringsnowball.net/accessing-swift-arrays-without-counting-on-fingers/"/>
+    <updated>2018-12-02T22:59:43+00:00</updated>
+    <id>http://daringsnowball.net/accessing-swift-arrays-without-counting-on-fingers</id>
+    <content type="html"><![CDATA[<p>I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check.</p>
+
+<p>It goes something like this:</p>
+
+<ul>
+<li>I imagine I have an array containing four elements</li>
+<li>I hold up four fingers</li>
+<li>I count &ldquo;zero, one, two, three&rdquo;, then think &ldquo;so if I ask for index four, it will break, so I need to range-check&hellip;&rdquo;</li>
+</ul>
+
+
+<p>OMG, 35 years. I&rsquo;ve probably done this thousands of times, and the range-check rules still won&rsquo;t stick in my brain.</p>
+
+<p>But here&rsquo;s a sneaky way to avoid that range-checking code, and I&rsquo;m not ashamed to say that I use this extension for real.</p>
+
+<!-- more -->
+
+
+<h3>An Array Extension</h3>
+
+<p>This is simply an Array extension which returns <code>nil</code> if the index doesn&rsquo;t exist. My reasoning is this: it&rsquo;s easier (for me) to write <code>if let</code> or <code>guard let</code> rather than counting on my fingers, and it saves me from coding stupid off-by-one errors.</p>
+
+<pre><code>extension Array {
+    func element(at index: Int) -&gt; Element? {
+        return index &lt; self.count ? self[index] : nil
+    }
+}
+</code></pre>
+
+<p>And I use it like this:</p>
+
+<pre><code>if let fifthElement = myArray.element(at: 4) {
+    // do something
+}
+</code></pre>
+
+<p>Or like this:</p>
+
+<pre><code>guard let fifthElement = myArray.element(at: 4) else {
+    // not there
+    return
+}
+
+// do something
+</code></pre>
+
+<p>Result: I do the &ldquo;count on fingers&rdquo; thing once per Swift project, when coding this extension, instead of several times per day.</p>
+
+<p>I wonder if something like this would ever be added to the standard library?</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Swift Extensions for Protocol Conformance Considered Harmful]]></title>
@@ -408,171 +465,6 @@ XCTAssertEqual(myValue, "expected value")
 <h3>Phone dependence</h3>
 
 <p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rewriting Nearly Departed (part 3: rewrite plans)]]></title>
-    <link href="http://daringsnowball.net/nearly-departed-rewrite-plans/"/>
-    <updated>2017-12-12T01:26:14+00:00</updated>
-    <id>http://daringsnowball.net/rewriting-nearly-departed-rewrite-plans</id>
-    <content type="html"><![CDATA[<p>So here&rsquo;s my plan for this rewrite of <em>Nearly Departed</em>.</p>
-
-<!-- more -->
-
-
-<blockquote><p>This is part 3 of a multi-part series:</p>
-
-<ul>
-<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
-<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
-<li>Part 3: rewrite plans</li>
-<li><a href="/nearly-departed-rewrite-storage-and-sync/">Part 4</a>: storage and sync</li>
-</ul>
-</blockquote>
-
-<h3>Goals</h3>
-
-<ul>
-<li>Rewrite in Swift</li>
-<li>&hellip; in a <em>Swifty</em> way</li>
-<li>With a decent set of unit tests</li>
-<li>Same features as the existing app:
-
-<ul>
-<li>departure boards (all departures from a station)</li>
-<li>station alerts (problems with services in this area)</li>
-<li>service alerts (problems with this particular service)</li>
-</ul>
-</li>
-<li>New features:
-
-<ul>
-<li>Show service details (the progress of an individual service during its journey)</li>
-<li>Reinstate Apple Watch support</li>
-<li>Architect the code so it wouldn&rsquo;t be impossible to add different datasources in the future</li>
-</ul>
-</li>
-</ul>
-
-
-<h3>Non-goals</h3>
-
-<ul>
-<li>Making money - this is primarily a learning exercise</li>
-</ul>
-
-
-<h3>Branching strategy</h3>
-
-<p>My git branching strategy is slightly unusual because I want to actually use the app daily while it&rsquo;s being developed, but I also want to maintain code quality and decent test coverage.</p>
-
-<dl>
-<dt>master branch</dt>
-<dd>this is the nice well-tested branch</dd>
-<dt>ui-spike branch</dt>
-<dd>this is the hacky branch, where code is tweaked to make things work. <code>master</code> is regularly merged into <code>ui-spike</code>, but not the other way around</dd>
-</dl>
-
-<h3>Using Laurine for localisation</h3>
-
-<p>I&rsquo;ve used <a href="https://github.com/JiriTrecak/Laurine/">Laurine</a> in <a href="https://itunes.apple.com/us/app/tldt-pages/id1071725095?ls=1&amp;mt=8">another app</a> with great success - and wanted to use it again here.</p>
-
-<p>You define your <code>Localizble.strings</code> file as normal:</p>
-
-<p><figure class='code'><figcaption><span>Localizable.strings </span></figcaption>
-<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">PLATFORM_NUMBER</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">Platform</span> <span class="o">%</span><span class="p">@</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;;</span>
-</span></code></pre></td></tr></table></div></figure></p>
-
-<p>and then Laurine generates a new <code>Localizations</code> swift file, which you can use like this:</p>
-
-<p><figure class='code'><figcaption><span>Localizations.swift </span></figcaption>
-<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">Localizations</span><span class="p">.</span><span class="n">PLATFORM_NUMBER</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="mi">4</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;)</span>
-</span></code></pre></td></tr></table></div></figure></p>
-
-<h3>Frameworks</h3>
-
-<p>Nope.</p>
-
-<p>It all sounds great - putting common code in a framework which is then shared between the iPhone app / widget / Watch App targets. But it never works out well.</p>
-
-<h3>Data models</h3>
-
-<p><strong>We&rsquo;ll start by talking about <em>Routes</em>.</strong> A route provides data for a request, and is user-defined in one of two ways:</p>
-
-<ol>
-<li>Explicitly, via the iOS app. (example: all departures from York to Leeds would be an instance of <code>DarwinDeparturesRoute</code>)</li>
-<li>Implicitly, from another route. (example: when viewing departures from York to Leeds, they might tap on a service to see its progress. This <code>DarwinServiceRoute</code> would be created automatically, containing the <code>serviceID</code> for the selected service)</li>
-</ol>
-
-
-<p>There is also a <code>NoRoutesRoute</code>. I&rsquo;m starting to develop an irrational dislike of optionals, so try to avoid them wherever I can. So if the user hasn&rsquo;t yet created any routes, we have a <code>NoRoutesRoute</code> there instead. (Thanks to <a href="https://twitter.com/kevinrutherford">Kevin Rutherford</a> for the inspiration to go down this route, with his &ldquo;write a program with no if statements&rdquo; kata)</p>
-
-<p>We need something to manage our collection of routes, and that&rsquo;s in the <code>RouteManager</code>. The user&rsquo;s <em>explicit</em> routes are stored in a collection, but we also allow other routes to pushed to form a stack, so the user can drill-down from one result to another.</p>
-
-<p>This might seem complex, but it allows the user to manage scenarios like this:</p>
-
-<ul>
-<li>User travelling from A to B, then B to C</li>
-<li>User creates explicit routes &ldquo;A to B&rdquo; and &ldquo;B to C&rdquo;</li>
-<li>When starting their journey, they select route &ldquo;A to B&rdquo; to see if their service is on-time</li>
-<li>Then they tap on the <em>service</em> to create an implicit Service route, which is popped onto the stack. They use this to track the progress of the service they&rsquo;re travelling on</li>
-<li>But they also want to see if the &ldquo;B to C&rdquo; service is running OK</li>
-<li>So they select the &ldquo;B to C&rdquo; route, and tap on a service to create a second implicit Service route, which is popped onto <em>that</em> stack</li>
-<li>Then they can switch between stacks, to keep track of both <em>services</em></li>
-</ul>
-
-
-<p><script src="/javascripts/mermaid.min.js"></script><div class="mermaid">
-graph LR
-RM[RouteManager]&ndash;>E1[&ldquo;Explicit route 1<br/>(example: A to B)&rdquo;]
-RM[RouteManager]&ndash;>E2[&ldquo;Explicit route 2<br/>(example: B to C)&rdquo;]
-subgraph stack
-E2&ndash;>I2[&ldquo;Implicit pushed route<br/>(example: 08:45 service from B to C)&rdquo;]
-end
-subgraph stack
-E1&ndash;>I1[&ldquo;Implicit pushed route<br/>(example: 08:00 service from A to B)&rdquo;]
-end
-</div></p>
-
-<p>This collection of stacks is stored in shared <code>UserDefaults</code>, so you could push a new route using the iPhone and then view its results on the Apple Watch.</p>
-
-<p><strong>Next, we&rsquo;ll need to get fetch data from an API</strong> for each type of route using <code>Entity</code> types which can fetch a particular kind of data. Right now there are two, but there could be more in the future:</p>
-
-<dl>
-<dt><code>DarwinDeparturesEntity</code></dt>
-<dd>gets OpenLDBWS departure boards for services between two stations (departures from station A calling at station B)</dd>
-<dt><code>DarwinServiceEntity</code></dt>
-<dd>gets OpenLDBWS service information (which returns the arrival/departure times for a service at each calling-point)</dd>
-</dl>
-
-<p><strong>Which brings us to <em>results</em>.</strong> Each type of route has a corresponding <code>ResultSet</code> containing a collection of <code>Result</code> objects. Those <code>Result</code> objects can represent either a <em>service departing from a station</em>, or a <em>calling point for a single service</em>. And - to enable the user to drill-down - each <code>Result</code> can have provide a child <code>Route</code>, which defines the next query.</p>
-
-<p>There are three other <code>ResultSet</code> objects:</p>
-
-<dl>
-<dt><code>NoRoutesResultSet</code></dt>
-<dd>this is used when there are no routes defined in the app</dd>
-<dt><code>LoadingResultSet</code></dt>
-<dd>this is returned from Entities when they&rsquo;re fetching data for the first time</dd>
-<dt><code>ErrorResultSet</code></dt>
-<dd>returned from Entities if an error occurred while fetching or parsing data</dd>
-</dl>
-
-<p>With these three extra <code>ResultSet</code> objects I can define the Entity&rsquo;s <code>resultSet</code> property as non-optional:</p>
-
-<p><figure class='code'><figcaption><span>Entity.swift </span></figcaption>
-<div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">public</span> <span class="k">protocol</span> <span class="n">Entity</span> <span class="p">{</span>
-</span><span class='line'>    <span class="k">var</span> <span class="nl">resultSet</span><span class="p">:</span> <span class="n">ResultSet</span> <span class="p">{</span> <span class="kr">get</span> <span class="p">}</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure></p>
-
-<p>In the <a href="/nearly-departed-rewrite-storage-and-sync/">next post</a>, I&rsquo;ll describe how route definitions are stored, and how they&rsquo;re synchronised between iPhone and Watch.</p>
 ]]></content>
   </entry>
   

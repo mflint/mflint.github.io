@@ -1,0 +1,127 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Accessing Swift Arrays Without Counting on Fingers  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check. It &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Accessing Swift Arrays Without Counting on Fingers</h2>
+	<div class="entry-content"><p>I have a confession to make: I&rsquo;ve been writing code for 35 years, but still need to count on my fingers when coding an array range-check.</p>
+
+<p>It goes something like this:</p>
+
+<ul>
+<li>I imagine I have an array containing four elements</li>
+<li>I hold up four fingers</li>
+<li>I count &ldquo;zero, one, two, three&rdquo;, then think &ldquo;so if I ask for index four, it will break, so I need to range-check&hellip;&rdquo;</li>
+</ul>
+
+
+<p>OMG, 35 years. I&rsquo;ve probably done this thousands of times, and the range-check rules still won&rsquo;t stick in my brain.</p>
+
+<p>But here&rsquo;s a sneaky way to avoid that range-checking code, and I&rsquo;m not ashamed to say that I use this extension for real.</p>
+
+<!-- more -->
+
+
+<h3>An Array Extension</h3>
+
+<p>This is simply an Array extension which returns <code>nil</code> if the index doesn&rsquo;t exist. My reasoning is this: it&rsquo;s easier (for me) to write <code>if let</code> or <code>guard let</code> rather than counting on my fingers, and it saves me from coding stupid off-by-one errors.</p>
+
+<pre><code>extension Array {
+    func element(at index: Int) -&gt; Element? {
+        return index &lt; self.count ? self[index] : nil
+    }
+}
+</code></pre>
+
+<p>And I use it like this:</p>
+
+<pre><code>if let fifthElement = myArray.element(at: 4) {
+    // do something
+}
+</code></pre>
+
+<p>Or like this:</p>
+
+<pre><code>guard let fifthElement = myArray.element(at: 4) else {
+    // not there
+    return
+}
+
+// do something
+</code></pre>
+
+<p>Result: I do the &ldquo;count on fingers&rdquo; thing once per Swift project, when coding this extension, instead of several times per day.</p>
+
+<p>I wonder if something like this would ever be added to the standard library?</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2018-12-02T22:59:43+00:00" pubdate data-updated="true">Dec 2nd, 2018</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2018
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>
