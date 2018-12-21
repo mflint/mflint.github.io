@@ -10,7 +10,7 @@ In September 2015, I tried to write a mocking framework for Swift. It was over-e
 
 That all changed earlier this year. I was writing much more Swift, both at home (for the _Nearly Departed_ rewrite) and in my day-job, and realised that mocks really are necessary if we want to thoroughly test how our classes interact with collaborators.
 
-tl;dr: `SwiftMock` is [Available on GitHub][github-swiftmock].
+tl;dr: `SwiftMock` is [available on GitHub][github-swiftmock].
 
 <!-- more -->
 
