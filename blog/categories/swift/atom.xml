@@ -4,7 +4,7 @@
   <title><![CDATA[Category: swift | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/swift/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-12-02T23:17:55+00:00</updated>
+  <updated>2018-12-21T12:23:21+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -12,6 +12,129 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[SwiftMock - A Mocking Solution for Swift 4.2]]></title>
+    <link href="http://daringsnowball.net/swiftmock-a-mocking-solution-for-swift-4-dot-2/"/>
+    <updated>2018-12-21T11:01:20+00:00</updated>
+    <id>http://daringsnowball.net/swiftmock-a-mocking-solution-for-swift-4-dot-2</id>
+    <content type="html"><![CDATA[<p>In September 2015, I tried to write a mocking framework for Swift. It was over-engineered, difficult to use and quickly abandoned; I decided instead that simple fakes would suffice.</p>
+
+<p>That all changed earlier this year. I was writing much more Swift, both at home (for the <em>Nearly Departed</em> rewrite) and in my day-job, and realised that mocks really are necessary if we want to thoroughly test how our classes interact with collaborators.</p>
+
+<p>tl;dr: <code>SwiftMock</code> is <a href="https://github.com/mflint/SwiftMock">Available on GitHub</a>.</p>
+
+<!-- more -->
+
+
+<h3>Note about my personal test approach</h3>
+
+<p>I&rsquo;m firmly in the &ldquo;mockist TDD practitioner&rdquo; camp. I exercise my system-under-test in isolation, and provide test doubles for all of its collaborators. My tests exercise the <em>public interface</em> of the system-under-test; they care that the system-under-test did the right thing, not <em>why</em> it did the right thing.</p>
+
+<h3>Various kinds of test doubles</h3>
+
+<p><a href="https://martinfowler.com/">Martin Fowler</a> write a <a href="https://martinfowler.com/articles/mocksArentStubs.html">great article on mocking and stubbing</a> in 2007, and explains things much better than I ever could. But briefly:</p>
+
+<ul>
+<li>a <em>test double</em> is a substitute implementation of a component which your system-under-test collaborates with</li>
+<li>there are various kinds of test doubles, including:
+
+<ul>
+<li>mocks - which have explicit expectations, assert those expectations and will reject unexpected calls</li>
+<li>stubs - which are primed to simply return data into your system-under-test; they feed data into your system</li>
+<li>fakes - which are simple reimplementations of a collaborator interface (or Swift protocol)</li>
+</ul>
+</li>
+</ul>
+
+
+<p>Let&rsquo;s briefly discuss these.</p>
+
+<h4>Mock function calls</h4>
+
+<p>I would mock a call if the collaborator is performing a useful action on behalf of the system-under-test. In this case, my test <em>really does care</em> that the expected function is called on the collaborator class, and should fail if that expectation fails.</p>
+
+<p>Examples would be:</p>
+
+<ul>
+<li>telling some <code>User</code> object to <code>logout()</code></li>
+<li>asking a <code>DataSource</code> object to <code>beginNetworkRequest()</code></li>
+<li>asking a <code>Timer</code> object to <code>startTimer(delay: 5)</code></li>
+</ul>
+
+
+<p>Mocked function calls:</p>
+
+<ul>
+<li>can have any number of parameters which usually must be checked (so the test should fail if you expect <code>startTimer(delay: 5)</code> but the code actually calls <code>startTimer(delay: 10)</code>)</li>
+<li>often have a <code>Void</code> return type</li>
+<li>typically have a verb-like name</li>
+</ul>
+
+
+<h4>Stubbed function calls</h4>
+
+<p>A stubbed call is simply used to pass data into your system-under-test. In this case, my test <em>doesn&rsquo;t care</em> if this function is called or not; it only cares that the system-under-test produces the correct output.</p>
+
+<p>Examples:</p>
+
+<ul>
+<li>getting a <code>UserModel</code> struct from a <code>User</code> object</li>
+<li>getting the <code>isRequesting</code> state from an object which performs network requests</li>
+<li>getting the current <code>UserPreferences</code> object from a <code>PreferenceStore</code> collaborator</li>
+</ul>
+
+
+<p>Stubbed functionality:</p>
+
+<ul>
+<li>is either a read-only property, or is a function with no parameters</li>
+<li>return a non-void result</li>
+</ul>
+
+
+<p>This distinction between mocks and stubs is important; while you <em>can</em> use mocks everywhere, this can lead to fragile tests. You&rsquo;ll eventually find yourself adding expectations that you don&rsquo;t care about, just to make the tests pass.</p>
+
+<h3>Mixing mocked and stubbed calls in a single test double</h3>
+
+<p><a href="https://martinfowler.com/articles/mocksArentStubs.html">Martin&rsquo;s article</a> suggests that a test double would either be a mock, <em>or</em> a stub, <em>or</em> a fake - but I find this choice of mocking or stubbing depends on the <em>function</em> being called, not to the whole object.</p>
+
+<p>Take this protocol as an example of a collaborator:</p>
+
+<pre><code>protocol User {
+    var isLoggingIn: Bool { get }
+    func login(username: String, password: String)
+    func logout()
+    func model() -&gt; UserModel
+}
+</code></pre>
+
+<p><code>isLoggingIn</code> is a read-only property, so is a great candidate for stubbing. Our system-under-test might produce some output like &ldquo;Logging you in&rdquo;, and our test will assert that this output is generated. But it doesn&rsquo;t care <em>how</em> the system-under-test produced the correct output - because that&rsquo;s testing the <em>internal</em> workings of the system-under-test.</p>
+
+<p><code>login(username: password:)</code> and <code>logout()</code> functions would be mocked. Their names are verbs, suggesting that they are performing some important action on behalf of our system-under-test.</p>
+
+<p><code>model()</code> call would be stubbed. It simply returns a value, it&rsquo;s name is a noun, and it could be substituted for a property. My tests doesn&rsquo;t care if this is called or not; but if the system-under-test does call this function, my test would have some other assertions on a different observable outcome.</p>
+
+<h3>How SwiftMock can help your project</h3>
+
+<p><em>SwiftMock</em> can help you assert the correctness of your code, if your tests are more in the <em>mockist</em> style - where you substitute all of your collaborators with test doubles.</p>
+
+<p>It will:</p>
+
+<ul>
+<li>allow you to set explicit expectations on a function call</li>
+<li>check the supplied parameters to the call are correct</li>
+<li>allow you to return values from the call back into the system-under-test</li>
+<li>optionally perform actions when a function is called (using a <code>doing</code> block), so function arguments can be captured</li>
+<li>fail-fast if unexpected calls are made</li>
+</ul>
+
+
+<h3>More details</h3>
+
+<p>The <a href="https://github.com/mflint/SwiftMock/blob/master/README.md">project README</a> has detailed usage instructions, about how to create and use <em>SwiftMock</em> mocks.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Accessing Swift Arrays Without Counting on Fingers]]></title>
@@ -394,77 +517,6 @@ XCTAssertEqual(myValue, "expected value")
 <h3>Extra bonus half-rule with no explanation</h3>
 
 <p>An enumeration with more than ten values is a code-smell.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rewriting Nearly Departed (part 4: storage and sync)]]></title>
-    <link href="http://daringsnowball.net/nearly-departed-rewrite-storage-and-sync/"/>
-    <updated>2017-12-23T22:16:29+00:00</updated>
-    <id>http://daringsnowball.net/rewriting-nearly-departed-storage-and-sync</id>
-    <content type="html"><![CDATA[<p>This post gives an overview about how <em>Nearly Departed</em> Routes are stored and synced between iPhone and Apple Watch.</p>
-
-<!-- more -->
-
-
-<blockquote><p>This is part 4 of a multi-part series:</p>
-
-<ul>
-<li><a href="/nearly-departed-rewrite-intro/">Part 1</a>: intro</li>
-<li><a href="/nearly-departed-rewrite-tech-background/">Part 2</a>: tech background</li>
-<li><a href="/nearly-departed-rewrite-plans/">Part 3</a>: rewrite plans</li>
-<li>Part 4: storage and sync</li>
-</ul>
-</blockquote>
-
-<h3>Route storage</h3>
-
-<p>Routes are stored in <code>UserDefaults</code> on the iPhone, and shared with the Watch using <em>WatchConnectivity</em>. To keep things simple, I have a <code>Storing</code> protocol for storing preferences and two implementations - one for the iPhone and one for the Watch.</p>
-
-<p>The iPhone implementation stores preferences in <code>UserDefaults</code> and also sends things to the Watch. The Watch implementation simply talks to its counterpart on the iPhone.</p>
-
-<p>After some experimentation (and help from <a href="https://developer.apple.com/library/content/documentation/General/Conceptual/WatchKitProgrammingGuide/SharingData.html">Apple&rsquo;s WatchConnectivity documentation</a> and <a href="https://kristina.io/watchos-2-how-to-communicate-between-devices-using-watch-connectivity/">Kristina Fox&rsquo;s blog</a>), I settled on this communication strategy:</p>
-
-<blockquote><ul>
-<li><p>When the Watch app first starts, it requests the current preferences by sending a &ldquo;get&rdquo; command to the iPhone via <em>Interactive Messaging</em>:</p>
-
-<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">([</span><span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="n">cmd</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;</span> <span class="o">:</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="kr">get</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="p">;],</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="k">in</span>
-</span><span class='line'>  <span class="c1">// handle reply from phone</span>
-</span><span class='line'><span class="p">})</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
-</span><span class='line'>  <span class="c1">// handle error</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure></p></li>
-<li><p>If preferences change on the iPhone, it sends data to the Watch by updating the <em>Application Context</em>:</p>
-
-<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="c1">// prefs is [String : Any]</span>
-</span><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">updateApplicationContext</span><span class="p">(</span><span class="n">prefs</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure></p></li>
-<li><p>If preferences change on the Watch, it sends data to the iPhone using <em>Interactive Messaging</em>:</p>
-
-<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='swift'><span class='line'><span class="c1">// prefs is [String : Any]</span>
-</span><span class='line'><span class="n">session</span><span class="p">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="n">prefs</span><span class="p">,</span> <span class="nl">replyHandler</span><span class="p">:</span> <span class="nb">nil</span><span class="p">,</span> <span class="nl">errorHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">in</span>
-</span><span class='line'>  <span class="c1">// handle error</span>
-</span><span class='line'><span class="p">})</span>
-</span></code></pre></td></tr></table></div></figure></p></li>
-</ul>
-</blockquote>
-
-<p>This strategy seems to work well; both <em>Application Context</em> and <em>Interactive Messaging</em> work reliably, and quickly. (I&rsquo;m testing with iOS 11.2 and WatchOS 4.2)</p>
-
-<h3>Phone dependence</h3>
-
-<p>This means that the Watch app doesn&rsquo;t store any preferences locally, but instead gets preferences from the iPhone every time the Watch app starts. This is fine for now, but will be a problem when cellular Watches are more common. I&rsquo;ll make a change in the future to store preferences locally on the Watch, so the app can start without a nearby phone.</p>
 ]]></content>
   </entry>
   
