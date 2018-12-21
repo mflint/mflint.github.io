@@ -4,7 +4,7 @@
   <title><![CDATA[Category: swift | Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/blog/categories/swift/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2018-12-21T12:23:21+00:00</updated>
+  <updated>2018-12-21T12:25:23+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -22,7 +22,7 @@
 
 <p>That all changed earlier this year. I was writing much more Swift, both at home (for the <em>Nearly Departed</em> rewrite) and in my day-job, and realised that mocks really are necessary if we want to thoroughly test how our classes interact with collaborators.</p>
 
-<p>tl;dr: <code>SwiftMock</code> is <a href="https://github.com/mflint/SwiftMock">Available on GitHub</a>.</p>
+<p>tl;dr: <code>SwiftMock</code> is <a href="https://github.com/mflint/SwiftMock">available on GitHub</a>.</p>
 
 <!-- more -->
 
