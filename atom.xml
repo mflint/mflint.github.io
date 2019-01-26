@@ -4,7 +4,7 @@
   <title><![CDATA[Matthew's Dev Blog]]></title>
   <link href="http://daringsnowball.net/atom.xml" rel="self"/>
   <link href="http://daringsnowball.net/"/>
-  <updated>2019-01-26T13:21:40+00:00</updated>
+  <updated>2019-01-26T13:23:35+00:00</updated>
   <id>http://daringsnowball.net/</id>
   <author>
     <name><![CDATA[Matthew Flint]]></name>
@@ -18,7 +18,7 @@
     <link href="http://daringsnowball.net/data-driven-screen-dispatching-for-ios/"/>
     <updated>2019-01-26T10:27:50+00:00</updated>
     <id>http://daringsnowball.net/data-driven-screen-dispatching-for-ios</id>
-    <content type="html"><![CDATA[<p>The <em>Coordinator Pattern</em> is rather trendy at the moment. <a href="http://khanlou.com/2015/10/coordinators-redux/">Soroush Khanlou</a> and <a href="https://www.hackingwithswift.com/articles/71/how-to-use-the-coordinator-pattern-in-ios-apps">Paul Hudson</a> have both written very fine blogposts about it, and I saw Paul talk about them - briefly - at <a href="https://www.iosdevuk.com">iOSDevUK</a> in 2018. There are some great benefits from using Coordinators, but I can&rsquo;t help feeling it doesn&rsquo;t go far enough.</p>
+    <content type="html"><![CDATA[<p>The <em>Coordinator Pattern</em> is rather trendy at the moment. <a href="http://khanlou.com/2015/10/coordinators-redux/">Soroush Khanlou</a> and <a href="https://www.hackingwithswift.com/articles/71/how-to-use-the-coordinator-pattern-in-ios-apps">Paul Hudson</a> have both written very fine blogposts about it, and I saw Paul talk about coordinators - briefly - at <a href="https://www.iosdevuk.com">iOSDevUK</a> in 2018. There are some great benefits from using Coordinators, but I can&rsquo;t help feeling it doesn&rsquo;t go far enough.</p>
 
 <p>I propose that app navigation should be driven by <em>data</em>.</p>
 
