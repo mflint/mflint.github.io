@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
+<loc>http://daringsnowball.net/data-driven-screen-dispatching-for-ios/</loc>
+<lastmod>2019-01-26T10:27:50+00:00</lastmod>
+</url>
+<url>
 <loc>http://daringsnowball.net/swiftmock-a-mocking-solution-for-swift-4-dot-2/</loc>
 <lastmod>2018-12-21T11:01:20+00:00</lastmod>
 </url>
@@ -87,6 +91,6 @@
 <loc>http://daringsnowball.net/blog/categories/best-practices/</loc>
 </url>
 <url>
-<loc>http://daringsnowball.net/posts/2/</loc>
+<loc>http://daringsnowball.net/blog/categories/ios/</loc>
 </url>
 </urlset>

@@ -1,0 +1,144 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Data-driven Screen Dispatching for iOS  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="The Coordinator Pattern is rather trendy at the moment. Soroush Khanlou and Paul Hudson have both written very fine blogposts about it, and I saw &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Data-driven Screen Dispatching for iOS</h2>
+	<div class="entry-content"><p>The <em>Coordinator Pattern</em> is rather trendy at the moment. <a href="http://khanlou.com/2015/10/coordinators-redux/">Soroush Khanlou</a> and <a href="https://www.hackingwithswift.com/articles/71/how-to-use-the-coordinator-pattern-in-ios-apps">Paul Hudson</a> have both written very fine blogposts about it, and I saw Paul talk about coordinators - briefly - at <a href="https://www.iosdevuk.com">iOSDevUK</a> in 2018. There are some great benefits from using Coordinators, but I can&rsquo;t help feeling it doesn&rsquo;t go far enough.</p>
+
+<p>I propose that app navigation should be driven by <em>data</em>.</p>
+
+<!-- more -->
+
+
+<h3>Data-driven navigation in a nutshell</h3>
+
+<p>My app doesn&rsquo;t want to show ViewControllers to the user; it wants to show <em>data</em>.</p>
+
+<h3>Architectural background for my apps</h3>
+
+<ul>
+<li>I generally use a variation of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel">MVVM</a>, so user-interface state is held outside the ViewController</li>
+<li>this means my ViewControllers are always small and free of logic</li>
+</ul>
+
+
+<p>Consequently, I really don&rsquo;t care about ViewControllers. I don&rsquo;t want to create them, I don&rsquo;t want to present them, I don&rsquo;t want to write code to wire them up.</p>
+
+<h3>Data-driven navigation example</h3>
+
+<p>In my <em>Nearly Departed</em> rewrite, I have a <code>RouteModel</code> which defines a pair of rail stations:</p>
+
+<pre><code>struct RouteModel {
+    let fromStationCode: String
+    let toStationCode: String
+}
+</code></pre>
+
+<p>My ViewModels will have a reference to a <em>dispatcher</em> object (more on that later), and will present a route like this:</p>
+
+<pre><code>let yorkToLeeds = RouteModel(fromStationCode: "YRK", toStationCode: "LDS")
+dispatcher.dispatch(yorkToLeeds)
+</code></pre>
+
+<p>That&rsquo;s it. We&rsquo;re showing <em>data</em> to the user, not a ViewController.</p>
+
+<p>The <code>RouteModel</code> can be dispatched because of an extension which makes it conform to a <code>Dispatchable</code> protocol - and it&rsquo;s that extension which decides how the data is shown to the user:</p>
+
+<pre><code>extension RouteModel: Dispatchable {
+    var dispatch: DispatchChange {
+        let viewModel = DeparturesViewModel(route: self)
+        return DispatchChange(presentation: .modal,
+                              options: .embedInNavigationController,
+                              viewModel: viewModel,
+                              viewControllerType: DeparturesViewController.self)
+    }
+}
+</code></pre>
+
+<h3>Why?</h3>
+
+<p>There are several nice outcomes of this:</p>
+
+<ul>
+<li>my ViewModels can use a dispatcher to show data to the user; they don&rsquo;t care about <em>how</em> it&rsquo;s shown</li>
+<li>it&rsquo;s easily unit-testable; I can use <a href="/swiftmock-a-mocking-solution-for-swift-4-dot-2/">SwiftMock</a> to create a mock for the <code>Dispatching</code> protocol, and easily assert that the correct data is being presented</li>
+<li>it still has the benefits of Soroush&rsquo;s coordinators - where ViewControllers are completely decoupled from each other</li>
+</ul>
+
+
+<h3>Source</h3>
+
+<p>There&rsquo;s an <a href="https://gist.github.com/mflint/30d70560722ec151202cc89f824da0ee">example implementation in this Gist</a>.</p>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2019-01-26T10:27:50+00:00" pubdate data-updated="true">Jan 26th, 2019</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/ios/'>ios</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2019
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>

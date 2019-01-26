@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: ios | Matthew's Dev Blog]]></title>
+  <link href="http://daringsnowball.net/blog/categories/ios/atom.xml" rel="self"/>
+  <link href="http://daringsnowball.net/"/>
+  <updated>2019-01-26T13:23:35+00:00</updated>
+  <id>http://daringsnowball.net/</id>
+  <author>
+    <name><![CDATA[Matthew Flint]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Data-driven Screen Dispatching for iOS]]></title>
+    <link href="http://daringsnowball.net/data-driven-screen-dispatching-for-ios/"/>
+    <updated>2019-01-26T10:27:50+00:00</updated>
+    <id>http://daringsnowball.net/data-driven-screen-dispatching-for-ios</id>
+    <content type="html"><![CDATA[<p>The <em>Coordinator Pattern</em> is rather trendy at the moment. <a href="http://khanlou.com/2015/10/coordinators-redux/">Soroush Khanlou</a> and <a href="https://www.hackingwithswift.com/articles/71/how-to-use-the-coordinator-pattern-in-ios-apps">Paul Hudson</a> have both written very fine blogposts about it, and I saw Paul talk about coordinators - briefly - at <a href="https://www.iosdevuk.com">iOSDevUK</a> in 2018. There are some great benefits from using Coordinators, but I can&rsquo;t help feeling it doesn&rsquo;t go far enough.</p>
+
+<p>I propose that app navigation should be driven by <em>data</em>.</p>
+
+<!-- more -->
+
+
+<h3>Data-driven navigation in a nutshell</h3>
+
+<p>My app doesn&rsquo;t want to show ViewControllers to the user; it wants to show <em>data</em>.</p>
+
+<h3>Architectural background for my apps</h3>
+
+<ul>
+<li>I generally use a variation of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel">MVVM</a>, so user-interface state is held outside the ViewController</li>
+<li>this means my ViewControllers are always small and free of logic</li>
+</ul>
+
+
+<p>Consequently, I really don&rsquo;t care about ViewControllers. I don&rsquo;t want to create them, I don&rsquo;t want to present them, I don&rsquo;t want to write code to wire them up.</p>
+
+<h3>Data-driven navigation example</h3>
+
+<p>In my <em>Nearly Departed</em> rewrite, I have a <code>RouteModel</code> which defines a pair of rail stations:</p>
+
+<pre><code>struct RouteModel {
+    let fromStationCode: String
+    let toStationCode: String
+}
+</code></pre>
+
+<p>My ViewModels will have a reference to a <em>dispatcher</em> object (more on that later), and will present a route like this:</p>
+
+<pre><code>let yorkToLeeds = RouteModel(fromStationCode: "YRK", toStationCode: "LDS")
+dispatcher.dispatch(yorkToLeeds)
+</code></pre>
+
+<p>That&rsquo;s it. We&rsquo;re showing <em>data</em> to the user, not a ViewController.</p>
+
+<p>The <code>RouteModel</code> can be dispatched because of an extension which makes it conform to a <code>Dispatchable</code> protocol - and it&rsquo;s that extension which decides how the data is shown to the user:</p>
+
+<pre><code>extension RouteModel: Dispatchable {
+    var dispatch: DispatchChange {
+        let viewModel = DeparturesViewModel(route: self)
+        return DispatchChange(presentation: .modal,
+                              options: .embedInNavigationController,
+                              viewModel: viewModel,
+                              viewControllerType: DeparturesViewController.self)
+    }
+}
+</code></pre>
+
+<h3>Why?</h3>
+
+<p>There are several nice outcomes of this:</p>
+
+<ul>
+<li>my ViewModels can use a dispatcher to show data to the user; they don&rsquo;t care about <em>how</em> it&rsquo;s shown</li>
+<li>it&rsquo;s easily unit-testable; I can use <a href="/swiftmock-a-mocking-solution-for-swift-4-dot-2/">SwiftMock</a> to create a mock for the <code>Dispatching</code> protocol, and easily assert that the correct data is being presented</li>
+<li>it still has the benefits of Soroush&rsquo;s coordinators - where ViewControllers are completely decoupled from each other</li>
+</ul>
+
+
+<h3>Source</h3>
+
+<p>There&rsquo;s an <a href="https://gist.github.com/mflint/30d70560722ec151202cc89f824da0ee">example implementation in this Gist</a>.</p>
+]]></content>
+  </entry>
+  
+</feed>
