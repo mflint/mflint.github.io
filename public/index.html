@@ -7,7 +7,7 @@
 
 	<meta name="author" content="Matthew Flint"> 
 	
-	<meta name="description" content="The Coordinator Pattern is rather trendy at the moment. Soroush Khanlou and Paul Hudson have both written very fine blogposts about it, and I saw &hellip;"> <meta name="keywords" content="">
+	<meta name="description" content="I have a dilemma; the Swift enum is a first-class type and, if we&rsquo;re to obey the laws of encapsulation, an enum type should own its &hellip;"> <meta name="keywords" content="">
 
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -36,6 +36,52 @@
 </header>
 
 	<div id="content" class="inner">
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/different-swift-enum-behaviours/">
+		
+			Exploring Different Behaviours in Swift Enums</a>
+	</h2>
+	<div class="entry-content">
+		<p>I have a dilemma; the Swift <code>enum</code> is a first-class type and, if we&rsquo;re to obey the laws of encapsulation, an <code>enum</code> type should own its functionality. But can we do this in a nice way, when its behaviour is different for each value in the enum?</p>
+
+<p>In this post, we&rsquo;ll explore the old Java <em>type-safe enumeration</em> pattern, revisit my old <a href="/enums-are-meant-for-switching/">enums are meant for switching</a> blogpost, and try to combine the lot.</p>
+
+
+		
+		<a href="/different-swift-enum-behaviours/" class="more-link">Read more</a>
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2019-07-27T19:35:48+01:00" pubdate data-updated="true">Jul 27th, 2019</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
 
 
     <article class="post">
@@ -446,67 +492,6 @@
 
 
 <time datetime="2017-12-11T23:13:14+00:00" pubdate data-updated="true">Dec 11th, 2017</time></div>
-	
-
-<div class="tags">
-
-	<a class='category' href='/blog/categories/nearlydeparted/'>nearlydeparted</a>, <a class='category' href='/blog/categories/swift/'>swift</a>
-
-</div>
-
-
-</div>
-</article>
-
-
-    <article class="post">
-	<h2 class="title">
-		
-		<a href="/nearly-departed-rewrite-intro/">
-		
-			Rewriting Nearly Departed (Part 1: Intro)</a>
-	</h2>
-	<div class="entry-content">
-		<p>I&rsquo;m re-writing one of my apps, <a href="https://itunes.apple.com/us/app/nearly-departed/id982783760?ls=1&amp;mt=8">Nearly Departed</a>, in Swift. There are four main reasons for this:</p>
-
-<ol>
-<li>it&rsquo;s written in Objective C, not Swift - and I desperately need some more exposure to Swift</li>
-<li>the code is difficult to maintain</li>
-<li>there are some features I want to add which can&rsquo;t easily be done with the current codebase</li>
-<li>fun</li>
-</ol>
-
-
-<p><a href="https://twitter.com/dwroboheadz">Someone</a> asked me to blog this, so here I am. This will hopefully chronicle the rewrite, until:</p>
-
-<ul>
-<li>I get bored of writing blogposts</li>
-<li>Dev stops, because I get distracted with something else, or</li>
-<li>It&rsquo;s released in the App Store</li>
-</ul>
-
-
-
-		
-		<a href="/nearly-departed-rewrite-intro/" class="more-link">Read more</a>
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-
-<time datetime="2017-12-11T19:01:48+00:00" pubdate data-updated="true">Dec 11th, 2017</time></div>
 	
 
 <div class="tags">
