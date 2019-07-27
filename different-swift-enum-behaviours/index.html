@@ -1,0 +1,434 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Exploring Different Behaviours in Swift Enums  | Matthew's Dev Blog</title>
+
+	<meta name="author" content="Matthew Flint"> 
+	
+	<meta name="description" content="I have a dilemma; the Swift enum is a first-class type and, if we&rsquo;re to obey the laws of encapsulation, an enum type should own its &hellip;"> <meta name="keywords" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Matthew's Dev Blog" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/font-awesome.min.css" rel="stylesheet" type="text/css">
+	<link href="/stylesheets/mermaid.css" media="screen, projection" rel="stylesheet" type="text/css">
+	
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	
+</head>
+
+
+
+<body>
+	<header id="header" class="inner"><h1>Matthew's Dev Blog</h1>
+<nav id="main-nav"><ul>
+	<li><a href="/">Blog</a></li>
+	<li><a href="/archives">Archive</a></li>
+	<li><a href="/about">About</a></li>
+</ul>
+</nav>
+
+
+</header>
+
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Exploring Different Behaviours in Swift Enums</h2>
+	<div class="entry-content"><p>I have a dilemma; the Swift <code>enum</code> is a first-class type and, if we&rsquo;re to obey the laws of encapsulation, an <code>enum</code> type should own its functionality. But can we do this in a nice way, when its behaviour is different for each value in the enum?</p>
+
+<p>In this post, we&rsquo;ll explore the old Java <em>type-safe enumeration</em> pattern, revisit my old <a href="/enums-are-meant-for-switching/">enums are meant for switching</a> blogpost, and try to combine the lot.</p>
+
+<!-- more -->
+
+
+<h3>Problem statement</h3>
+
+<p>My open-source <a href="https://github.com/mflint/ios-tldr-viewer/">tldr-pages app</a> shows concise man-pages for command-line commands - and some of these have variations for different platforms. For example, the command <code>hostname</code> has different documentation for macOS and Linux. So I&rsquo;ve defined a type called <code>Platform</code> to represent a single platform.</p>
+
+<p>The requirements for <code>Platform</code> are simple. It must be able to:</p>
+
+<ul>
+<li>be instantiated by passing in a known string (<code>osx</code>, <code>sunos</code>, etc)</li>
+<li>handle unknown platform strings (<code>vms</code> or <code>os2warp</code>)</li>
+<li>give us a name which is suitable for display</li>
+</ul>
+
+
+<h3>The ugly Platform.swift</h3>
+
+<p>At the time of writing, <code>Platform.swift</code> looks rather like this:</p>
+
+<pre><code>class Platform {
+    /// this matches the platform names in the main tl;dr project
+    var name: String
+
+    /// this is the name as displayed on the screen
+    var displayName: String
+
+    private static let platformMapping = [
+        "osx": "macOS",
+        "sunos": "Solaris",
+        "linux": "Linux",
+        "windows": "Windows",
+        "common": "Common"
+    ]
+
+    private init(name: String) {
+        self.name = name
+
+        if let mapped = Platform.platformMapping[name] {
+            self.displayName = mapped
+        } else {
+            self.displayName = name.capitalized
+        }
+    }
+}
+</code></pre>
+
+<p>And I&rsquo;m creating Platform objects like this:</p>
+
+<pre><code>let macOS = Platform(name: "osx") // "osx" value comes from the tl;dr project
+</code></pre>
+
+<p>There&rsquo;s lots of things wrong with this type. First, it&rsquo;s a <code>class</code>, and there&rsquo;s no reason for it to be a reference type. We need a different approach.</p>
+
+<h3>Changing <code>Platform</code> to be an <code>enum</code></h3>
+
+<p>An <code>enum</code> would be ideal, so let&rsquo;s try that:</p>
+
+<pre><code>enum Platform: String {
+    case osx
+    case sunos
+    case linux
+    case windows
+    case common
+    case unknown(name: String)
+
+    var displayName: String {
+        get {
+            switch self {
+            case .osx:
+                return "macOS"
+            case .sunos:
+                return "Solaris"
+            case .linux:
+                return "Linux"
+            case .windows:
+                return "Windows"
+            case .common:
+                return "Common"
+            case .unknown(let name):
+                return name.capitalized
+            }
+        }
+    }
+}
+</code></pre>
+
+<p>I said a while back that <a href="/enums-are-meant-for-switching/">enums were meant for switching</a>, and this satisfies my rule.</p>
+
+<p>This looks nice - except it <strong>doesn&rsquo;t compile</strong>. A Swift <code>enum</code> can have a raw type (<code>enum Platform: String</code>) or a case with arguments (<code>unknown(name: String)</code>) but not both. Our requirement is that this <em>must</em> handle unknown platform names, so we can&rsquo;t lose the <code>unknown</code> case. The raw type must go, but we can provide similar functionality by adopting <code>ExpressibleByStringLiteral</code>:</p>
+
+<pre><code>enum Platform: ExpressibleByStringLiteral {
+    case osx
+    case sunos
+    case linux
+    case windows
+    case common
+    case unknown(name: String)
+
+    var displayName: String {
+        get {
+            switch self {
+            case .osx:
+                return "macOS"
+            case .sunos:
+                return "Solaris"
+            case .linux:
+                return "Linux"
+            case .windows:
+                return "Windows"
+            case .common:
+                return "Common"
+            case .unknown(let name):
+                return name
+            }
+        }
+    }
+
+    // initializer for ExpressibleByStringLiteral
+    public init(stringLiteral name: String) {
+        switch name {
+        case "osx":
+            self = .osx
+        case "sunos":
+            self = .sunos
+        case "linux":
+            self = .linux
+        case "windows":
+            self = .windows
+        case "common":
+            self = .common
+        default:
+            self = .unknown(name: name)
+        }
+    }
+}
+</code></pre>
+
+<p>Now we can use the enum like this:</p>
+
+<pre><code>let platform: Platform = "osx"
+platform.displayName // "macOS"
+</code></pre>
+
+<p>But here&rsquo;s the problem: we now have two ugly <code>switch</code> statements in our <code>Platform</code> type - and if we add more functionality to the type, then it&rsquo;s likely that we&rsquo;ll be adding even more <code>switch</code>es.</p>
+
+<p>Worse still: all the logic for each different platform is scattered throughout the whole class, and ideally all the <em>linux</em> code would be grouped together. I don&rsquo;t want switches everywhere.</p>
+
+<h3>Enter the <em>strategy</em> pattern</h3>
+
+<p>I first came across the <a href="https://en.wikipedia.org/wiki/Strategy_pattern">Strategy Pattern</a> in the <a href="https://en.wikipedia.org/wiki/Design_Patterns">Gang of Four</a> in the late 1990&rsquo;s, and this pattern is perfect for the case where every function in an object consists of a near-identical <code>switch</code> statement. It looks like this:</p>
+
+<pre><code>// this protocol defines the common behaviours for each platform
+private protocol PlatformStrategy {
+    var displayName: String { get }
+}
+
+// now we define a concrete implementation for each platform
+private struct OSXPlatformSrategy: PlatformStrategy {
+    let displayName = "macOS"
+}
+
+// and our public Platform class has a reference to one of the platform types
+public struct Platform {
+    private let strategy: PlatformStrategy
+
+    public var displayName: String {
+        get {
+            return strategy.displayName
+        }
+    }
+
+    init() {
+        // somehow decide which platform this is
+        strategy = OSXPlatformStrategy()
+    }
+}
+</code></pre>
+
+<p>This seems like a lot of work for a single <code>displayName</code> proprety - but if there were a few more properties, there are real advantages of keeping all the <em>macOS</em> functionality inside the <code>OSXPlatformStrategy</code> type.</p>
+
+<p>In the old Java world, before <code>enum</code> was added to the languade in Java 5, we used to write <em>typesafe enumerations</em> like this:</p>
+
+<pre><code>class Platform {
+    static final Platform osx = new Platform("osx");
+    static final Platform linux = new Platform("linux");
+
+    String name;
+
+    private Platform(String name) {
+        this.name = name;
+    }
+}
+</code></pre>
+
+<p>&hellip; and it wasn&rsquo;t hard to apply the strategy pattern to the Java typesafe enum. We&rsquo;d make the enum type <em>abstract</em>, then define each case as an anonymous class which extends the abstract type, and provides implementations for the abstract methods:</p>
+
+<pre><code>abstract class Platform {
+    static final Platform osx = new Platform("osx") {
+        String displayName() {
+            return "macOS";
+        }
+    };
+
+    static final Platform linux = new Platform("linux") {
+        String displayName() {
+            return "Linux";
+        }
+    };
+
+    String name;
+    abstract String displayName();
+
+    private Platform(String name) {
+        this.name = name;
+    }
+}
+</code></pre>
+
+<p>This is nice; the individual behaviour for the <em>osx</em> and <em>linux</em> cases is encapsulated entirely in the two anonymous classes. Can we do something similar in Swift?</p>
+
+<h3>Broken Swift implementation</h3>
+
+<p>The equivalent Swift code would look like this:</p>
+
+<pre><code>protocol PlatformStrategy {
+    var displayName: String { get }
+}
+
+enum Platform {
+    case osx
+    case linux
+
+    var strategy: PlatformStrategy
+
+    var displayName: String {
+        get {
+            return strategy.displayName
+        }
+    }
+
+    init(name: String) {
+        // set the strategy here
+    }
+}
+</code></pre>
+
+<p>Unfortunately is doesn&rsquo;t compile, because <code>enums must not contain stored properties</code>. However Swift enums already do (kind of) have a property: <code>rawValue</code>. We&rsquo;d need to lose our <code>unknown</code> case with its argument, but can we abuse <code>rawValue</code> as a place to store our strategy?</p>
+
+<h3><code>rawValue</code> as a strategy type</h3>
+
+<p>It&rsquo;s not as easy as you&rsquo;d think, because the raw value for a case must be a literal value. So this won&rsquo;t work:</p>
+
+<pre><code>protocol PlatformStrategy {}
+
+class OSXStrategy {}
+
+class LinuxStrategy {}
+
+enum Platform: PlatformStrategy {
+    case osx = OSXStrategy()     // not a literal
+    case linux = LinuxStrategy() // not a literal
+}
+</code></pre>
+
+<p>But it <em>is</em> possible to declare a new type for our <code>rawValue</code> which adopts <code>ExpressibleByStringLiteral</code>. (Currently, this also needs to adopt <code>Equatable</code> to avoid a Signal 11 compiler crash)</p>
+
+<pre><code>protocol PlatformStrategy {
+    var displayName: String { get }
+}
+
+struct OSXStrategy: PlatformStrategy {
+    var displayName = "macOS"
+}
+
+struct LinuxStrategy: PlatformStrategy {
+    var displayName = "Linux"
+}
+
+struct OtherStrategy: PlatformStrategy {
+    var displayName: String
+
+    init(_ name: String) {
+        displayName = name
+    }
+}
+
+struct PlatformRawValue: ExpressibleByStringLiteral, Equatable {
+    let strategy: PlatformStrategy
+
+    public init(stringLiteral name: String) {
+        switch name {
+        case "osx":
+            strategy = OSXStrategy()
+        case "linux":
+            strategy = LinuxStrategy()
+        default:
+            strategy = OtherStrategy(name)
+        }
+    }
+
+    static func ==(_ lhs: PlatformRawValue, _ rhs: PlatformRawValue) -&gt; Bool {
+        return lhs.strategy.displayName == rhs.strategy.displayName
+    }
+}
+
+enum Platform: PlatformRawValue, RawRepresentable {
+    typealias RawValue = PlatformRawValue
+
+    var displayName: String {
+        get {
+            return rawValue.strategy.displayName
+        }
+    }
+
+    case osx = "osx"
+    case linux = "linux"
+}
+
+Platform.osx.displayName
+Platform.linux.displayName
+</code></pre>
+
+<p>In this example, we have a <code>LinuxStrategy</code> type which encapsulates all the linuxy behaviour separately from the <code>OSXStrategy</code>, and the <code>Platform</code> enum uses a custom <code>rawValue</code> type! Unfortunately I can&rsquo;t simulate the <code>unknown</code> case with arguments. I&rsquo;ve tried to do this by calling <code>Platform(rawValue: "osx")?.displayName</code>, but the <code>Platform</code>initializer returns <code>nil</code>.</p>
+
+<h3>Conclusion</h3>
+
+<p>I can&rsquo;t find an easy way to define a Swift <code>enum</code> where each case has distinct behaviour, unless I use <code>switch</code> statements everywhere. Sad times!</p>
+
+<p>Ideally, we&rsquo;d be able to do something like this:</p>
+
+<pre><code>protocol PlatformProtocol {
+    func displayName() -&gt; String
+}
+
+enum Platform: PlatformProtocol {
+    case osx
+    case linux
+}
+
+extension Platform where Self == Platform.osx {
+    func displayName() -&gt; String {
+        return "macOS"
+    }
+}
+
+extension Platform where Self == Platform.linux {
+    func displayName() -&gt; String {
+        return "linux"
+    }
+}
+</code></pre>
+</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+
+<time datetime="2019-07-27T19:35:48+01:00" pubdate data-updated="true">Jul 27th, 2019</time></div>
+	
+
+<div class="tags">
+
+	<a class='category' href='/blog/categories/swift/'>swift</a>
+
+</div>
+
+
+</div>
+</article>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2019
+ Matthew Flint 
+<br>
+Powered by Octopress.
+</footer>
+	
+
+</body>
+</html>
