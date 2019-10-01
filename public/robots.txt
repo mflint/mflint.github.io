@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: 
+Disallow: /CV-MatthewFlint.pdf
 
 Sitemap: http://daringsnowball.net/sitemap.xml 
